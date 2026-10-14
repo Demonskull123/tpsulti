@@ -3233,6 +3233,74 @@ CC_API.SyncSizes   = ccSyncSizes
 CC_API.SyncOpacity = ccSyncOpacity
 CC_API.SyncLock    = ccSyncLock
 
+-- ============================================================
+-- AUTO-SHOW MOBILE BUTTONS ONLY WHEN GK TOOL EQUIPPED
+-- ============================================================
+local CC_AUTO_SHOW = true
+local CC_lastEquipped = nil
+
+local function ccIsGkToolEquipped()
+    local ch = lpCC.Character
+    if not ch then return false end
+    for _, t in ipairs(ch:GetChildren()) do
+        if t:IsA("Tool") then
+            local n = t.Name
+            if n == "ToolGGK" or n == "ToolBGK" then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function ccApplyAutoVisibility()
+    if not CC_AUTO_SHOW then return end
+    local equipped = ccIsGkToolEquipped()
+    if equipped == CC_lastEquipped then return end
+    CC_lastEquipped = equipped
+    CC.btn.visible = equipped
+    CC.mobEnabled  = equipped
+    ccGui.Enabled  = equipped
+    ccSaveState()
+end
+
+do
+    local ch = lpCC.Character
+    if ch then
+        ch.ChildAdded:Connect(function(c)
+            if c:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
+        end)
+        ch.ChildRemoved:Connect(function(c)
+            if c:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
+        end)
+    end
+    lpCC.CharacterAdded:Connect(function(c)
+        task.wait(1)
+        c.ChildAdded:Connect(function(x)
+            if x:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
+        end)
+        c.ChildRemoved:Connect(function(x)
+            if x:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
+        end)
+        ccApplyAutoVisibility()
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        ccApplyAutoVisibility()
+    end
+end)
+
+CC_API.SetAutoShow = function(v)
+    CC_AUTO_SHOW = v
+    if not v then
+        ccApplyAutoVisibility()
+    end
+end
+CC_API.RefreshAutoShow = ccApplyAutoVisibility
+
 local CCSection = MiscTab:Section({ Title = "Custom Controls" })
 
 local customURL = "https://Custom-Controls1.github.io/-"
@@ -3394,9 +3462,21 @@ CCSection:Input({
 local CCMob = MiscTab:Section({ Title = "Custom Controls (Mobile GK)" })
 
 CCMob:Toggle({
-    Title = "Show Mobile GK Buttons",
+    Title = "Auto-Show Only When GK Tool Equipped",
+    Default = true,
+    Callback = function(v)
+        CC_AUTO_SHOW = v
+        if v then
+            ccApplyAutoVisibility()
+        end
+    end,
+})
+
+CCMob:Toggle({
+    Title = "Force Show Buttons",
     Default = CC.btn.visible,
     Callback = function(v)
+        if CC_AUTO_SHOW then return end
         CC.btn.visible = v
         CC.mobEnabled  = v
         ccGui.Enabled  = v
