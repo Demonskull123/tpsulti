@@ -56,7 +56,7 @@ oldAC = hookmetamethod(game, "__namecall", function(self, ...)
         local remoteName = tostring(self)
         if remoteName:find("RemoteEventL") or remoteName:find("Anticheat") or
            remoteName:find("Banned") or remoteName:find("Ban") or remoteName:find("Kick") then
-            return wait(9e9)
+            return
         end
     end
     return oldAC(self, ...)
@@ -169,163 +169,26 @@ player.CharacterAdded:Connect(function(newCharacter)
     end)
 end)
 
+-- ============================================================
+-- REACH — single body sphere, head excluded via Y filter
+-- ============================================================
 local reachSettings = {
-    HeadEnabled = false,
-    HeadVisualizer = false,
-    ReachX_Head = 1,
-    ReachY_Head = 1,
-    ReachZ_Head = 1,
-    RightArmEnabled = false,
-    RightArmVisualizer = false,
-    ReachX_Arm = 1,
-    ReachY_Arm = 1,
-    ReachZ_Arm = 1,
-    LeftArmEnabled = false,
-    LeftArmVisualizer = false,
-    RightLegEnabled = false,
-    RightLegVisualizer = false,
-    ReachX_Leg = 1,
-    ReachY_Leg = 1,
-    ReachZ_Leg = 1,
-    LeftLegEnabled = false,
-    LeftLegVisualizer = false,
-    ReachDistance = 50,
+    SphereEnabled = false,
+    SphereVisualizer = false,
+    Radius = 6,
+    HeadExcludeMargin = 0.5,
 }
 
-local BodyParts = {"Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 local Character = player.Character or player.CharacterAdded:Wait()
-local Hitboxes = {}
-local Visualizers = {}
-
+local SphereHitbox = nil
+local SphereVisualizer = nil
 local ActiveTouches = {}
 local TOUCH_COOLDOWN = 0.1
 
-local function GetReachDistanceForPart(partName)
-    if partName == "Head" then
-        if not reachSettings.HeadEnabled then return 0 end
-        local avgScale = (reachSettings.ReachX_Head + reachSettings.ReachY_Head + reachSettings.ReachZ_Head) / 3
-        return reachSettings.ReachDistance * avgScale
-    elseif partName == "Right Arm" or partName == "Left Arm" then
-        local side = partName:match("(%w+)%s")
-        if not reachSettings[side.."ArmEnabled"] then return 0 end
-        local avgScale = (reachSettings.ReachX_Arm + reachSettings.ReachY_Arm + reachSettings.ReachZ_Arm) / 3
-        return reachSettings.ReachDistance * avgScale
-    elseif partName == "Right Leg" or partName == "Left Leg" then
-        local side = partName:match("(%w+)%s")
-        if not reachSettings[side.."LegEnabled"] then return 0 end
-        local avgScale = (reachSettings.ReachX_Leg + reachSettings.ReachY_Leg + reachSettings.ReachZ_Leg) / 3
-        return reachSettings.ReachDistance * avgScale
-    end
-    return 0
-end
-
-local function CreateHitbox(bodyPart, partName)
-    local hitbox = Instance.new("Part")
-    hitbox.Name = partName.."_niggers"
-    hitbox.Anchored = false
-    hitbox.CanCollide = false
-    hitbox.Transparency = 1
-    hitbox.Massless = true
-
-    if partName == "Head" then
-        hitbox.Size = Vector3.new(
-            bodyPart.Size.X * reachSettings.ReachX_Head * 2,
-            bodyPart.Size.Y * reachSettings.ReachY_Head * 2,
-            bodyPart.Size.Z * reachSettings.ReachZ_Head * 2
-        )
-    elseif partName == "Right Arm" or partName == "Left Arm" then
-        hitbox.Size = Vector3.new(
-            bodyPart.Size.X * reachSettings.ReachX_Arm * 2,
-            bodyPart.Size.Y * reachSettings.ReachY_Arm * 2,
-            bodyPart.Size.Z * reachSettings.ReachZ_Arm * 2
-        )
-    elseif partName == "Right Leg" or partName == "Left Leg" then
-        hitbox.Size = Vector3.new(
-            bodyPart.Size.X * reachSettings.ReachX_Leg * 2,
-            bodyPart.Size.Y * reachSettings.ReachY_Leg * 2,
-            bodyPart.Size.Z * reachSettings.ReachZ_Leg * 2
-        )
-    end
-
-    hitbox.CFrame = bodyPart.CFrame
-    hitbox.Parent = bodyPart
-
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = bodyPart
-    weld.Part1 = hitbox
-    weld.Parent = hitbox
-
-    return hitbox
-end
-
-function UpdateVisualizer(partName)
-    local bodyPart = Character:FindFirstChild(partName)
-    if not bodyPart then return end
-
-    local reachDist = GetReachDistanceForPart(partName)
-
-    if reachDist > 0 then
-        if Hitboxes[partName] then
-            Hitboxes[partName]:Destroy()
-        end
-        Hitboxes[partName] = CreateHitbox(bodyPart, partName)
-    else
-        if Hitboxes[partName] then
-            Hitboxes[partName]:Destroy()
-            Hitboxes[partName] = nil
-        end
-    end
-
-    local isVisualizerEnabled = false
-    if partName == "Head" then
-        isVisualizerEnabled = reachSettings.HeadVisualizer
-    elseif partName == "Right Arm" then
-        isVisualizerEnabled = reachSettings.RightArmVisualizer
-    elseif partName == "Left Arm" then
-        isVisualizerEnabled = reachSettings.LeftArmVisualizer
-    elseif partName == "Right Leg" then
-        isVisualizerEnabled = reachSettings.RightLegVisualizer
-    elseif partName == "Left Leg" then
-        isVisualizerEnabled = reachSettings.LeftLegVisualizer
-    end
-
-    if Visualizers[partName] then
-        Visualizers[partName]:Destroy()
-        Visualizers[partName] = nil
-    end
-
-    if isVisualizerEnabled and Hitboxes[partName] then
-        local hitbox = Hitboxes[partName]
-        local visualizer = Instance.new("Part")
-        visualizer.Name = partName.."_Visualizer"
-        visualizer.Size = hitbox.Size
-        visualizer.CFrame = hitbox.CFrame
-        visualizer.Anchored = false
-        visualizer.CanCollide = false
-        visualizer.Transparency = 0.7
-        visualizer.Color = Color3.fromRGB(0, 255, 0)
-        visualizer.Material = Enum.Material.Neon
-        visualizer.Massless = true
-        visualizer.Parent = hitbox
-
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = hitbox
-        weld.Part1 = visualizer
-        weld.Parent = visualizer
-
-        Visualizers[partName] = visualizer
-    end
-end
-
 local function FindBallPart(part)
-    if part:IsA("BasePart") and part.Name == "TPS" then
+    if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall") then
         return part
     end
-
-    if part:IsA("BasePart") and part.Name == "PSoccerBall" then
-        return part
-    end
-
     local current = part
     while current and current ~= workspace do
         if current:IsA("BasePart") and current.Name == "PSoccerBall" then
@@ -333,108 +196,176 @@ local function FindBallPart(part)
         end
         current = current.Parent
     end
-
     return nil
 end
 
-local function CreateAllHitboxes()
-    for _, partName in ipairs(BodyParts) do
-        local bodyPart = Character:FindFirstChild(partName)
+local function DestroySphere()
+    if SphereHitbox then SphereHitbox:Destroy() SphereHitbox = nil end
+    if SphereVisualizer then SphereVisualizer:Destroy() SphereVisualizer = nil end
+    table.clear(ActiveTouches)
+end
 
-        if bodyPart then
-            local reachDist = GetReachDistanceForPart(partName)
+local function AttachPartFor(c)
+    return c:FindFirstChild("UpperTorso")
+        or c:FindFirstChild("Torso")
+        or c:FindFirstChild("HumanoidRootPart")
+end
 
-            if reachDist > 0 then
-                if Hitboxes[partName] then
-                    Hitboxes[partName]:Destroy()
-                end
+local function CreateSphere()
+    DestroySphere()
+    if not Character or not Character.Parent then return end
+    if not reachSettings.SphereEnabled then return end
 
-                Hitboxes[partName] = CreateHitbox(bodyPart, partName)
-            end
-        end
+    local attach = AttachPartFor(Character)
+    if not attach then return end
+
+    local d = reachSettings.Radius * 2
+
+    local s = Instance.new("Part")
+    s.Name        = "ReachSphere"
+    s.Shape       = Enum.PartType.Ball
+    s.Size        = Vector3.new(d, d, d)
+    s.Anchored    = false
+    s.CanCollide  = false
+    s.CanQuery    = true
+    s.CanTouch    = true
+    s.Massless    = true
+    s.Transparency = 1
+    s.CFrame      = attach.CFrame
+    s.Parent      = attach
+
+    local w = Instance.new("WeldConstraint")
+    w.Part0 = attach
+    w.Part1 = s
+    w.Parent = s
+
+    SphereHitbox = s
+
+    if reachSettings.SphereVisualizer then
+        local v = Instance.new("Part")
+        v.Name        = "ReachSphereVisualizer"
+        v.Shape       = Enum.PartType.Ball
+        v.Size        = s.Size
+        v.Anchored    = false
+        v.CanCollide  = false
+        v.CanQuery    = false
+        v.CanTouch    = false
+        v.Massless    = true
+        v.Transparency = 0.65
+        v.Color       = Color3.fromRGB(0, 255, 0)
+        v.Material    = Enum.Material.ForceField
+        v.CFrame      = s.CFrame
+        v.Parent      = s
+
+        local w2 = Instance.new("WeldConstraint")
+        w2.Part0 = s
+        w2.Part1 = v
+        w2.Parent = v
+
+        SphereVisualizer = v
     end
 end
 
-local function RemoveAllHitboxes()
-    for partName, hitbox in pairs(Hitboxes) do
-        if hitbox then
-            hitbox:Destroy()
-        end
+local function ResizeSphere()
+    if not SphereHitbox then return end
+    local d = reachSettings.Radius * 2
+    SphereHitbox.Size = Vector3.new(d, d, d)
+    if SphereVisualizer then
+        SphereVisualizer.Size = Vector3.new(d, d, d)
     end
-    for partName, visualizer in pairs(Visualizers) do
-        if visualizer then
-            visualizer:Destroy()
-        end
+end
+
+local function SetVisualizer(on)
+    if not SphereHitbox then return end
+    if on and not SphereVisualizer then
+        local v = Instance.new("Part")
+        v.Name        = "ReachSphereVisualizer"
+        v.Shape       = Enum.PartType.Ball
+        v.Size        = SphereHitbox.Size
+        v.Anchored    = false
+        v.CanCollide  = false
+        v.CanQuery    = false
+        v.CanTouch    = false
+        v.Massless    = true
+        v.Transparency = 0.65
+        v.Color       = Color3.fromRGB(0, 255, 0)
+        v.Material    = Enum.Material.ForceField
+        v.CFrame      = SphereHitbox.CFrame
+        v.Parent      = SphereHitbox
+
+        local w = Instance.new("WeldConstraint")
+        w.Part0 = SphereHitbox
+        w.Part1 = v
+        w.Parent = v
+
+        SphereVisualizer = v
+    elseif not on and SphereVisualizer then
+        SphereVisualizer:Destroy()
+        SphereVisualizer = nil
     end
-    table.clear(Hitboxes)
-    table.clear(Visualizers)
-    table.clear(ActiveTouches)
 end
 
 local function CheckBallCollisions()
     if not Character or not Character.Parent then return end
+    if not SphereHitbox or not SphereHitbox.Parent then return end
 
-    local currentTime = tick()
+    local head = Character:FindFirstChild("Head")
+    local headY = head and head.Position.Y or math.huge
+    local cutoffY = headY - reachSettings.HeadExcludeMargin
+
+    local now = tick()
     local newTouches = {}
 
-    for partName, hitbox in pairs(Hitboxes) do
-        if hitbox and hitbox.Parent then
-            local bodyPart = Character:FindFirstChild(partName)
+    local op = OverlapParams.new()
+    op.FilterDescendantsInstances = { Character }
+    op.FilterType = Enum.RaycastFilterType.Exclude
 
-            if bodyPart then
-                local overlapParams = OverlapParams.new()
-                overlapParams.FilterDescendantsInstances = {Character}
-                overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+    local parts = workspace:GetPartBoundsInBox(
+        SphereHitbox.CFrame,
+        SphereHitbox.Size,
+        op
+    )
 
-                local partsInBox = workspace:GetPartBoundsInBox(hitbox.CFrame, hitbox.Size, overlapParams)
-
-                for _, part in ipairs(partsInBox) do
-                    local ballPart = FindBallPart(part)
-
-                    if ballPart then
-                        local touchKey = partName..":"..ballPart:GetFullName()
-                        newTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
-
-                        if not ActiveTouches[touchKey] or (currentTime - ActiveTouches[touchKey].time) > TOUCH_COOLDOWN then
-                            ActiveTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
-
-                            pcall(function()
-                                firetouchinterest(ballPart, bodyPart, 0)
-                                task.wait()
-                                firetouchinterest(ballPart, bodyPart, 1)
-                            end)
-                        end
-                    end
-                end
+    for _, p in ipairs(parts) do
+        local ball = FindBallPart(p)
+        if ball and ball.Position.Y < cutoffY then
+            local key = ball:GetFullName()
+            newTouches[key] = true
+            if not ActiveTouches[key] or (now - ActiveTouches[key]) > TOUCH_COOLDOWN then
+                ActiveTouches[key] = now
+                pcall(function()
+                    firetouchinterest(ball, SphereHitbox, 0)
+                    firetouchinterest(ball, SphereHitbox, 1)
+                end)
             end
         end
     end
 
-    for touchKey, touchData in pairs(ActiveTouches) do
-        if not newTouches[touchKey] and (currentTime - touchData.time) > TOUCH_COOLDOWN then
-            ActiveTouches[touchKey] = nil
+    for k, t in pairs(ActiveTouches) do
+        if not newTouches[k] and (now - t) > TOUCH_COOLDOWN then
+            ActiveTouches[k] = nil
         end
     end
 end
 
-CreateAllHitboxes()
-
-local lastUpdate = 0
 RunService.Heartbeat:Connect(function()
-    local now = tick()
-    if now - lastUpdate >= 0.1 then
-        lastUpdate = now
-        pcall(CheckBallCollisions)
+    if not reachSettings.SphereEnabled then return end
+    if not SphereHitbox or not SphereHitbox.Parent then
+        CreateSphere()
+        return
     end
+    pcall(CheckBallCollisions)
 end)
 
-player.CharacterAdded:Connect(function(char)
-    Character = char
-    RemoveAllHitboxes()
-
-    task.wait(2)
-    CreateAllHitboxes()
+player.CharacterAdded:Connect(function(c)
+    Character = c
+    DestroySphere()
+    task.wait(1)
+    CreateSphere()
 end)
+
+task.wait(1)
+CreateSphere()
 
 -- hi >_<
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
@@ -472,248 +403,45 @@ local HitboxTab = Window:Tab({
     Icon = "box",
 })
 
-local HeadSection = HitboxTab:Section({
-    Title = "Head Reach"
+local SphereSection = HitboxTab:Section({
+    Title = "Body Sphere Reach"
 })
 
-HeadSection:Toggle({
-    Title = "Enable Head Reach",
+SphereSection:Toggle({
+    Title = "Enable Sphere Reach",
     Default = false,
     Callback = function(v)
-        reachSettings.HeadEnabled = v
-        UpdateVisualizer("Head")
-    end
+        reachSettings.SphereEnabled = v
+        if v then CreateSphere() else DestroySphere() end
+    end,
 })
 
-HeadSection:Toggle({
-    Title = "Head Hitbox",
+SphereSection:Toggle({
+    Title = "Show Sphere Visualizer",
     Default = false,
     Callback = function(v)
-        reachSettings.HeadVisualizer = v
-        UpdateVisualizer("Head")
-    end
+        reachSettings.SphereVisualizer = v
+        SetVisualizer(v)
+    end,
 })
 
-HeadSection:Slider({
-    Title = "Head X Size",
+SphereSection:Slider({
+    Title = "Sphere Radius (studs)",
     Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
+    Value = { Min = 1, Max = 30, Default = reachSettings.Radius },
     Callback = function(v)
-        reachSettings.ReachX_Head = v
-        UpdateVisualizer("Head")
-    end
+        reachSettings.Radius = v
+        ResizeSphere()
+    end,
 })
 
-HeadSection:Slider({
-    Title = "Head Y Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
+SphereSection:Slider({
+    Title = "Head Exclude Margin (studs)",
+    Step = 0.1,
+    Value = { Min = 0, Max = 3, Default = reachSettings.HeadExcludeMargin },
     Callback = function(v)
-        reachSettings.ReachY_Head = v
-        UpdateVisualizer("Head")
-    end
-})
-
-HeadSection:Slider({
-    Title = "Head Z Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachZ_Head = v
-        UpdateVisualizer("Head")
-    end
-})
-
-HitboxTab:Space()
-
-local ArmSection = HitboxTab:Section({
-    Title = "Arm Reach"
-})
-
-ArmSection:Toggle({
-    Title = "Enable Right Arm",
-    Default = false,
-    Callback = function(v)
-        reachSettings.RightArmEnabled = v
-        UpdateVisualizer("Right Arm")
-    end
-})
-
-ArmSection:Toggle({
-    Title = "Right Arm Hitbox",
-    Default = false,
-    Callback = function(v)
-        reachSettings.RightArmVisualizer = v
-        UpdateVisualizer("Right Arm")
-    end
-})
-
-ArmSection:Toggle({
-    Title = "Enable Left Arm",
-    Default = false,
-    Callback = function(v)
-        reachSettings.LeftArmEnabled = v
-        UpdateVisualizer("Left Arm")
-    end
-})
-
-ArmSection:Toggle({
-    Title = "Left Arm Hitbox",
-    Default = false,
-    Callback = function(v)
-        reachSettings.LeftArmVisualizer = v
-        UpdateVisualizer("Left Arm")
-    end
-})
-
-ArmSection:Slider({
-    Title = "Arm X Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachX_Arm = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Arm")
-        UpdateVisualizer("Left Arm")
-    end
-})
-
-ArmSection:Slider({
-    Title = "Arm Y Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachY_Arm = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Arm")
-        UpdateVisualizer("Left Arm")
-    end
-})
-
-ArmSection:Slider({
-    Title = "Arm Z Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachZ_Arm = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Arm")
-        UpdateVisualizer("Left Arm")
-    end
-})
-
-HitboxTab:Space()
-
-local LegSection = HitboxTab:Section({
-    Title = "Leg Reach"
-})
-
-LegSection:Toggle({
-    Title = "Enable Right Leg",
-    Default = false,
-    Callback = function(v)
-        reachSettings.RightLegEnabled = v
-        UpdateVisualizer("Right Leg")
-    end
-})
-
-LegSection:Toggle({
-    Title = "Right Leg Hitbox",
-    Default = false,
-    Callback = function(v)
-        reachSettings.RightLegVisualizer = v
-        UpdateVisualizer("Right Leg")
-    end
-})
-
-LegSection:Toggle({
-    Title = "Enable Left Leg",
-    Default = false,
-    Callback = function(v)
-        reachSettings.LeftLegEnabled = v
-        UpdateVisualizer("Left Leg")
-    end
-})
-
-LegSection:Toggle({
-    Title = "Left Leg Hitbox",
-    Default = false,
-    Callback = function(v)
-        reachSettings.LeftLegVisualizer = v
-        UpdateVisualizer("Left Leg")
-    end
-})
-
-LegSection:Slider({
-    Title = "Leg X Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachX_Leg = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Leg")
-        UpdateVisualizer("Left Leg")
-    end
-})
-
-LegSection:Slider({
-    Title = "Leg Y Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachY_Leg = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Leg")
-        UpdateVisualizer("Left Leg")
-    end
-})
-
-LegSection:Slider({
-    Title = "Leg Z Size",
-    Step = 0.5,
-    Value = {
-        Min = 0,
-        Max = 20,
-        Default = 1,
-    },
-    Callback = function(v)
-        reachSettings.ReachZ_Leg = v
-        task.wait(0.1)
-        UpdateVisualizer("Right Leg")
-        UpdateVisualizer("Left Leg")
-    end
+        reachSettings.HeadExcludeMargin = v
+    end,
 })
 
 local MiscTab = Window:Tab({
@@ -1069,7 +797,7 @@ ACSection:Toggle({
                     local remoteName = tostring(self)
                     if remoteName:find("CheckPlayerW") or remoteName:find("Anti") or
                        remoteName:find("Detect") or remoteName:find("Ban") or remoteName:find("Kick") then
-                        return wait(9e9)
+                        return
                     end
                 end
                 return oldAC2(self, ...)
@@ -2938,11 +2666,11 @@ GKSection:Button({
 })
 
 -- ============================================================
--- CUSTOM CONTROLS (MOBILE) — 3 one-tap GK combos
---   1) Save + Keep1    2) Save + Keep2    3) Jump + Save + Keep2
+-- CUSTOM CONTROLS (MOBILE) — URL-loaded, text 7-5 style UI
+--   Local buttons: K1+SAVE, JUMP K1+SV (instant)
+--   Jump uses ReplicatedStorage.Managers.BManager.Animate.jump (no VIM)
 -- ============================================================
 local Http  = game:GetService("HttpService")
-local VIMcc = game:GetService("VirtualInputManager")
 local lpCC  = game:GetService("Players").LocalPlayer
 
 local CC_DIR  = "TPSULT_CustomControls"
@@ -2957,13 +2685,8 @@ if ccCanSave and type(makefolder) == "function"
 end
 
 local CC = {
-    mobEnabled  = false,
-    saveToKeep  = 0.04,
-    keepDelay   = 0.04,
-    jumpToSave  = 0.14,
-    jumpHold    = 0.06,
-    keepRepeat  = 1,
-    btn = { size = 78, opacity = 0.88, locked = false, visible = false },
+    mobEnabled = false,
+    btn = { size = 88, opacity = 0.88, locked = false, visible = false },
     positions = {},
 }
 
@@ -2995,13 +2718,6 @@ local function ccGetModule(tool, which)
     return nil
 end
 
-local function ccSave()
-    local mod = ccGetModule(ccGkTool(), "SaveModule")
-    if not mod then return false end
-    task.spawn(function() pcall(function() require(mod).Save() end) end)
-    return true
-end
-
 local function ccKeep1()
     local mod = ccGetModule(ccGkTool(), "Keep1Module")
     if not mod then return false end
@@ -3009,73 +2725,82 @@ local function ccKeep1()
     return true
 end
 
-local function ccKeep2()
-    local mod = ccGetModule(ccGkTool(), "Keep2Module")
+local function ccSave()
+    local mod = ccGetModule(ccGkTool(), "SaveModule")
     if not mod then return false end
-    task.spawn(function() pcall(function() require(mod).Keep2() end) end)
+    task.spawn(function() pcall(function() require(mod).Save() end) end)
     return true
 end
 
-local function ccPress(kc, down)
-    if not kc then return end
-    pcall(function() VIMcc:SendKeyEvent(down, kc, false, game) end)
-    if keypress and keyrelease then
-        pcall(function()
-            local fn = down and keypress or keyrelease
-            if fn then fn(kc.Value) end
-        end)
-    end
-end
-
 local function ccJump()
-    ccPress(Enum.KeyCode.Space, true)
-    pcall(function()
-        local h = ccHum()
-        if h and h.Parent and h.Health > 0 then
+    local RS = game:GetService("ReplicatedStorage")
+    local mgr = RS:FindFirstChild("Managers")
+    local bm  = mgr and mgr:FindFirstChild("BManager")
+    local ani = bm and bm:FindFirstChild("Animate")
+    local jmp = ani and ani:FindFirstChild("jump")
+
+    if jmp then
+        local ok = pcall(function()
+            local mod = require(jmp)
+            if type(mod) == "function" then
+                mod()
+            elseif type(mod) == "table" and type(mod.Play) == "function" then
+                mod.Play()
+            elseif type(mod) == "table" and type(mod.Jump) == "function" then
+                mod.Jump()
+            end
+        end)
+        if ok then return true end
+    end
+
+    local h = ccHum()
+    if h and h.Parent and h.Health > 0 then
+        pcall(function()
             h:SetStateEnabled(Enum.HumanoidStateType.Jumping,  true)
             h:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
             h.Jump = true
             h:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end)
-    task.wait(CC.jumpHold)
-    ccPress(Enum.KeyCode.Space, false)
-end
-
-local function macro_SaveKeep1()
-    ccSave()
-    task.wait(CC.saveToKeep)
-    for _ = 1, CC.keepRepeat do
-        ccKeep1()
-        if CC.keepRepeat > 1 then task.wait(0.05) end
+        end)
+        return true
     end
+    return false
 end
 
-local function macro_SaveKeep2()
+local function macro_KeepSave()
+    ccKeep1()
     ccSave()
-    task.wait(CC.keepDelay)
-    for _ = 1, CC.keepRepeat do
-        ccKeep2()
-        if CC.keepRepeat > 1 then task.wait(0.05) end
-    end
 end
 
-local function macro_JumpSaveKeep2()
+local function macro_JumpKeepSave()
     ccJump()
-    task.wait(CC.jumpToSave)
+    ccKeep1()
     ccSave()
-    task.wait(CC.keepDelay)
-    for _ = 1, CC.keepRepeat do
-        ccKeep2()
-        if CC.keepRepeat > 1 then task.wait(0.05) end
-    end
 end
 
 local CC_MACROS = {
-    SaveKeep1     = macro_SaveKeep1,
-    SaveKeep2     = macro_SaveKeep2,
-    JumpSaveKeep2 = macro_JumpSaveKeep2,
+    KeepSave     = macro_KeepSave,
+    JumpKeepSave = macro_JumpKeepSave,
 }
+
+getgenv = getgenv or function() return _G end
+local CC_API = {}
+getgenv().TPSULT_CC = CC_API
+
+CC_API.Config = CC
+CC_API.Macros = CC_MACROS
+CC_API.Keep1  = ccKeep1
+CC_API.Save   = ccSave
+CC_API.Jump   = ccJump
+
+CC_API.RegisterMacro = function(name, fn)
+    if type(name) == "string" and type(fn) == "function" then
+        CC_MACROS[name] = fn
+    end
+end
+
+CC_API.Gui = nil
+CC_API.RunCombo = nil
+CC_API.SaveState = nil
 
 local function ccBuildPayload()
     local pout = {}
@@ -3083,14 +2808,9 @@ local function ccBuildPayload()
         pout[id] = { xs=ud.X.Scale, xo=ud.X.Offset, ys=ud.Y.Scale, yo=ud.Y.Offset }
     end
     return {
-        v = 2,
+        v = 5,
         btn = { size = CC.btn.size, opacity = CC.btn.opacity, locked = CC.btn.locked },
         positions = pout,
-        timings = {
-            saveToKeep = CC.saveToKeep, keepDelay = CC.keepDelay,
-            jumpToSave = CC.jumpToSave, jumpHold  = CC.jumpHold,
-            keepRepeat = CC.keepRepeat,
-        },
     }
 end
 
@@ -3102,14 +2822,10 @@ local function ccApplyPayload(d)
         if type(d.btn.locked)  == "boolean" then CC.btn.locked  = d.btn.locked end
     end
     if type(d.positions) == "table" then
-        for id, p in pairs(d.positions) do            if type(p) == "table" and p.xs and p.xo and p.ys and p.yo then
+        for id, p in pairs(d.positions) do
+            if type(p) == "table" and p.xs and p.xo and p.ys and p.yo then
                 CC.positions[id] = UDim2.new(p.xs, p.xo, p.ys, p.yo)
             end
-        end
-    end
-    if type(d.timings) == "table" then
-        for k, v in pairs(d.timings) do
-            if CC[k] ~= nil and type(v) == type(CC[k]) then CC[k] = v end
         end
     end
 end
@@ -3118,6 +2834,7 @@ local function ccSaveState()
     if not ccCanSave then return end
     pcall(function() writefile(CC_FILE, Http:JSONEncode(ccBuildPayload())) end)
 end
+CC_API.SaveState = ccSaveState
 
 local function ccLoadState()
     if not ccCanSave then return end
@@ -3131,14 +2848,12 @@ end
 ccLoadState()
 
 local CC_BTNS = {
-    { id="ccSK1",  label="SAVE\n+ K1",  combo="SaveKeep1"     },
-    { id="ccSK2",  label="SAVE\n+ K2",  combo="SaveKeep2"     },
-    { id="ccJSK2", label="JUMP\nSV+K2", combo="JumpSaveKeep2" },
+    { id="ccKS",  label="K1\n+SAVE",   combo="KeepSave"     },
+    { id="ccJKS", label="JUMP\nK1+SV", combo="JumpKeepSave" },
 }
 local CC_DEFAULT_POS = {
-    ccSK1  = UDim2.new(0.60, 0, 0.62, 0),
-    ccSK2  = UDim2.new(0.72, 0, 0.62, 0),
-    ccJSK2 = UDim2.new(0.66, 0, 0.76, 0),
+    ccKS  = UDim2.new(0.62, 0, 0.66, 0),
+    ccJKS = UDim2.new(0.76, 0, 0.66, 0),
 }
 
 local ccRoot = game:GetService("CoreGui")
@@ -3157,6 +2872,7 @@ ccGui.DisplayOrder = 999997
 ccGui.IgnoreGuiInset = true
 ccGui.Enabled = CC.btn.visible
 ccGui.Parent = ccRoot
+CC_API.Gui = ccGui
 
 local ccRefs = {}
 local ccBusy = false
@@ -3170,9 +2886,10 @@ local function ccRunCombo(id)
         ccBusy = false
     end)
 end
+CC_API.RunCombo = ccRunCombo
 
-for _, def in ipairs(CC_BTNS) do
-    local pos = CC.positions[def.id] or CC_DEFAULT_POS[def.id]
+local function ccAddButton(def)
+    local pos = CC.positions[def.id] or CC_DEFAULT_POS[def.id] or UDim2.new(0.5, 0, 0.5, 0)
     CC.positions[def.id] = pos
 
     local btn = Instance.new("TextButton")
@@ -3184,7 +2901,7 @@ for _, def in ipairs(CC_BTNS) do
     btn.TextColor3             = Color3.fromRGB(0, 255, 130)
     btn.Font                   = Enum.Font.GothamBold
     btn.TextSize               = 14
-    btn.Text                   = def.label
+    btn.Text                   = def.label or def.id
     btn.BorderSizePixel        = 0
     btn.Active                 = true
     btn.Parent                 = ccGui
@@ -3245,6 +2962,10 @@ for _, def in ipairs(CC_BTNS) do
     ccRefs[def.id] = { btn = btn, stroke = stroke }
 end
 
+for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
+
+CC_API.AddButton = ccAddButton
+
 local function ccSyncSizes()
     for _, r in pairs(ccRefs) do
         r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
@@ -3262,9 +2983,171 @@ local function ccSyncLock()
     end
 end
 
-local CCSection = MiscTab:Section({ Title = "Custom Controls (Mobile GK)" })
+CC_API.SyncSizes   = ccSyncSizes
+CC_API.SyncOpacity = ccSyncOpacity
+CC_API.SyncLock    = ccSyncLock
 
-CCSection:Toggle({
+local CCSection = MiscTab:Section({ Title = "Custom Controls" })
+
+local customURL = "https://Custom-Controls1.github.io/-"
+local customLoaded = false
+
+local function ccShowPopup(title, body, color)
+    local pg = lpCC:FindFirstChildOfClass("PlayerGui")
+    if not pg then return end
+    local ex = pg:FindFirstChild("TPSULTPopup")
+    if ex then ex:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "TPSULTPopup"
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 999999
+    gui.Parent = pg
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 560, 0, 200)
+    frame.Position = UDim2.new(0.5, -280, 0.4, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Color3.fromRGB(255, 80, 80)
+    stroke.Thickness = 1.5
+    stroke.Parent = frame
+
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Size = UDim2.new(1, -20, 0, 28)
+    titleLbl.Position = UDim2.new(0, 10, 0, 8)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.TextColor3 = color or Color3.fromRGB(255, 120, 120)
+    titleLbl.Font = Enum.Font.GothamBold
+    titleLbl.TextSize = 16
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    titleLbl.Text = title
+    titleLbl.Parent = frame
+
+    local bodyLbl = Instance.new("TextLabel")
+    bodyLbl.Size = UDim2.new(1, -20, 1, -50)
+    bodyLbl.Position = UDim2.new(0, 10, 0, 40)
+    bodyLbl.BackgroundTransparency = 1
+    bodyLbl.TextColor3 = Color3.fromRGB(230, 230, 230)
+    bodyLbl.Font = Enum.Font.Code
+    bodyLbl.TextSize = 13
+    bodyLbl.TextWrapped = true
+    bodyLbl.TextXAlignment = Enum.TextXAlignment.Left
+    bodyLbl.TextYAlignment = Enum.TextYAlignment.Top
+    bodyLbl.Text = body
+    bodyLbl.Parent = frame
+
+    task.delay(0.8, function()
+        if gui then gui:Destroy() end
+    end)
+end
+
+local function ccProbe(url)
+    local ok, res = pcall(function() return game:HttpGet(url) end)
+    if not ok then return false, "HttpGet failed: " .. tostring(res) end
+    if type(res) ~= "string" then return false, "HttpGet returned " .. typeof(res) end
+    if #res == 0 then return false, "empty body" end
+    local head = res:sub(1, 200):lower()
+    if head:find("<!doctype") or head:find("<html") or head:find("<head") then
+        return false, "URL returned HTML not Lua:\n\n" .. res:sub(1, 200)
+    end
+    return true, res
+end
+
+local function ccLoadCustom()
+    if customLoaded then return true end
+    local ok, body = ccProbe(customURL)
+    if not ok then
+        warn("[TPSULT] custom controls: " .. body)
+        ccShowPopup("Custom Controls: fetch failed", body)
+        return false
+    end
+
+    local ls = loadstring or load
+    if type(ls) ~= "function" then
+        ccShowPopup("Custom Controls: execute failed", "no loadstring/load")
+        return false
+    end
+
+    local fn, perr = ls(body)
+    if not fn then
+        local msg = "compile error from " .. customURL .. ":\n\n" .. tostring(perr)
+        warn("[TPSULT] custom controls: " .. msg)
+        ccShowPopup("Custom Controls: execute failed", msg)
+        return false
+    end
+
+    local ran, rerr = pcall(fn)
+    if not ran then
+        local msg = "runtime error from " .. customURL .. ":\n\n" .. tostring(rerr)
+        warn("[TPSULT] custom controls: " .. msg)
+        ccShowPopup("Custom Controls: execute failed", msg)
+        return false
+    end
+
+    customLoaded = true
+    return true
+end
+
+CCSection:Button({
+    Title = "Load Custom Controls",
+    Justify = "Center",
+    Icon = "",
+    Callback = function()
+        if ccLoadCustom() then
+            ccShowPopup("Custom Controls", "Loaded successfully.", Color3.fromRGB(0, 255, 130))
+        end
+    end,
+})
+
+CCSection:Button({
+    Title = "Diagnose Custom Controls URL",
+    Justify = "Center",
+    Icon = "",
+    Callback = function()
+        local lines = {
+            "loadstring: " .. tostring(type(loadstring)),
+            "load: " .. tostring(type(load)),
+            "URL: " .. customURL,
+        }
+        local ok, res = pcall(function() return game:HttpGet(customURL) end)
+        if not ok then
+            lines[#lines + 1] = "HttpGet error: " .. tostring(res)
+        elseif type(res) ~= "string" then
+            lines[#lines + 1] = "HttpGet returned: " .. typeof(res)
+        else
+            lines[#lines + 1] = "body length: " .. #res
+            lines[#lines + 1] = "first 120 chars:"
+            lines[#lines + 1] = res:sub(1, 120)
+        end
+        local text = table.concat(lines, "\n")
+        print("[TPSULT] DIAGNOSE:\n" .. text)
+        ccShowPopup("Custom Controls Diagnose", text)
+    end,
+})
+
+CCSection:Input({
+    Title = "Custom Controls URL",
+    PlaceholderText = "https://...",
+    Default = customURL,
+    Callback = function(v)
+        if v and v ~= "" then
+            customURL = v
+            customLoaded = false
+        end
+    end,
+})
+
+local CCMob = MiscTab:Section({ Title = "Custom Controls (Mobile GK)" })
+
+CCMob:Toggle({
     Title = "Show Mobile GK Buttons",
     Default = CC.btn.visible,
     Callback = function(v)
@@ -3275,49 +3158,25 @@ CCSection:Toggle({
     end,
 })
 
-CCSection:Toggle({
-    Title = "Lock Buttons (tap = run, no drag)",
+CCMob:Toggle({
+    Title = "Lock Buttons (tap = run)",
     Default = CC.btn.locked,
     Callback = function(v) CC.btn.locked = v ccSyncLock() ccSaveState() end,
 })
 
-CCSection:Slider({
+CCMob:Slider({
     Title = "Button Size", Step = 2, Suffix = " px",
-    Value = { Min=40, Max=160, Default=CC.btn.size },
+    Value = { Min=40, Max=180, Default=CC.btn.size },
     Callback = function(v) CC.btn.size = v ccSyncSizes() ccSaveState() end,
 })
 
-CCSection:Slider({
+CCMob:Slider({
     Title = "Button Opacity", Step = 0.05,
     Value = { Min=0.1, Max=1, Default=CC.btn.opacity },
     Callback = function(v) CC.btn.opacity = v ccSyncOpacity() ccSaveState() end,
 })
 
-CCSection:Slider({
-    Title = "Save → Keep Gap", Step = 0.01, Suffix = "s",
-    Value = { Min=0.01, Max=0.5, Default=CC.saveToKeep },
-    Callback = function(v) CC.saveToKeep = v CC.keepDelay = v ccSaveState() end,
-})
-
-CCSection:Slider({
-    Title = "Jump → Save Gap", Step = 0.01, Suffix = "s",
-    Value = { Min=0.02, Max=0.5, Default=CC.jumpToSave },
-    Callback = function(v) CC.jumpToSave = v ccSaveState() end,
-})
-
-CCSection:Slider({
-    Title = "Jump Hold", Step = 0.01, Suffix = "s",
-    Value = { Min=0.02, Max=0.3, Default=CC.jumpHold },
-    Callback = function(v) CC.jumpHold = v ccSaveState() end,
-})
-
-CCSection:Slider({
-    Title = "Keep Repeat Count", Step = 1,
-    Value = { Min=1, Max=4, Default=CC.keepRepeat },
-    Callback = function(v) CC.keepRepeat = v ccSaveState() end,
-})
-
-CCSection:Button({
+CCMob:Button({
     Title = "Save Layout + Settings", Justify = "Center", Icon = "",
     Callback = function() ccSaveState() end,
 })
@@ -3333,7 +3192,7 @@ local Dialog = Window:Dialog({
                 print("hi")
             end
         }
-    }
+    },
 })
 
 WindUI:Notify({
