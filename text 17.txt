@@ -170,13 +170,14 @@ player.CharacterAdded:Connect(function(newCharacter)
 end)
 
 -- ============================================================
--- REACH — single body sphere, head excluded via Y filter
+-- REACH — single body sphere, head excluded, fires on body part
 -- ============================================================
 local reachSettings = {
     SphereEnabled = false,
     SphereVisualizer = false,
     Radius = 6,
     HeadExcludeMargin = 0.5,
+    UpdateInterval = 0.05,
 }
 
 local Character = player.Character or player.CharacterAdded:Wait()
@@ -184,6 +185,7 @@ local SphereHitbox = nil
 local SphereVisualizer = nil
 local ActiveTouches = {}
 local TOUCH_COOLDOWN = 0.1
+local lastCheck = 0
 
 local function FindBallPart(part)
     if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall") then
@@ -222,17 +224,17 @@ local function CreateSphere()
     local d = reachSettings.Radius * 2
 
     local s = Instance.new("Part")
-    s.Name        = "ReachSphere"
-    s.Shape       = Enum.PartType.Ball
-    s.Size        = Vector3.new(d, d, d)
-    s.Anchored    = false
-    s.CanCollide  = false
-    s.CanQuery    = true
-    s.CanTouch    = true
-    s.Massless    = true
+    s.Name         = "ReachSphere"
+    s.Shape        = Enum.PartType.Ball
+    s.Size         = Vector3.new(d, d, d)
+    s.Anchored     = false
+    s.CanCollide   = false
+    s.CanQuery     = true
+    s.CanTouch     = true
+    s.Massless     = true
     s.Transparency = 1
-    s.CFrame      = attach.CFrame
-    s.Parent      = attach
+    s.CFrame       = attach.CFrame
+    s.Parent       = attach
 
     local w = Instance.new("WeldConstraint")
     w.Part0 = attach
@@ -243,19 +245,19 @@ local function CreateSphere()
 
     if reachSettings.SphereVisualizer then
         local v = Instance.new("Part")
-        v.Name        = "ReachSphereVisualizer"
-        v.Shape       = Enum.PartType.Ball
-        v.Size        = s.Size
-        v.Anchored    = false
-        v.CanCollide  = false
-        v.CanQuery    = false
-        v.CanTouch    = false
-        v.Massless    = true
+        v.Name         = "ReachSphereVisualizer"
+        v.Shape        = Enum.PartType.Ball
+        v.Size         = s.Size
+        v.Anchored     = false
+        v.CanCollide   = false
+        v.CanQuery     = false
+        v.CanTouch     = false
+        v.Massless     = true
         v.Transparency = 0.65
-        v.Color       = Color3.fromRGB(0, 255, 0)
-        v.Material    = Enum.Material.ForceField
-        v.CFrame      = s.CFrame
-        v.Parent      = s
+        v.Color        = Color3.fromRGB(0, 255, 0)
+        v.Material     = Enum.Material.ForceField
+        v.CFrame       = s.CFrame
+        v.Parent       = s
 
         local w2 = Instance.new("WeldConstraint")
         w2.Part0 = s
@@ -279,19 +281,19 @@ local function SetVisualizer(on)
     if not SphereHitbox then return end
     if on and not SphereVisualizer then
         local v = Instance.new("Part")
-        v.Name        = "ReachSphereVisualizer"
-        v.Shape       = Enum.PartType.Ball
-        v.Size        = SphereHitbox.Size
-        v.Anchored    = false
-        v.CanCollide  = false
-        v.CanQuery    = false
-        v.CanTouch    = false
-        v.Massless    = true
+        v.Name         = "ReachSphereVisualizer"
+        v.Shape        = Enum.PartType.Ball
+        v.Size         = SphereHitbox.Size
+        v.Anchored     = false
+        v.CanCollide   = false
+        v.CanQuery     = false
+        v.CanTouch     = false
+        v.Massless     = true
         v.Transparency = 0.65
-        v.Color       = Color3.fromRGB(0, 255, 0)
-        v.Material    = Enum.Material.ForceField
-        v.CFrame      = SphereHitbox.CFrame
-        v.Parent      = SphereHitbox
+        v.Color        = Color3.fromRGB(0, 255, 0)
+        v.Material     = Enum.Material.ForceField
+        v.CFrame       = SphereHitbox.CFrame
+        v.Parent       = SphereHitbox
 
         local w = Instance.new("WeldConstraint")
         w.Part0 = SphereHitbox
@@ -308,6 +310,9 @@ end
 local function CheckBallCollisions()
     if not Character or not Character.Parent then return end
     if not SphereHitbox or not SphereHitbox.Parent then return end
+
+    local attach = AttachPartFor(Character)
+    if not attach then return end
 
     local head = Character:FindFirstChild("Head")
     local headY = head and head.Position.Y or math.huge
@@ -334,8 +339,8 @@ local function CheckBallCollisions()
             if not ActiveTouches[key] or (now - ActiveTouches[key]) > TOUCH_COOLDOWN then
                 ActiveTouches[key] = now
                 pcall(function()
-                    firetouchinterest(ball, SphereHitbox, 0)
-                    firetouchinterest(ball, SphereHitbox, 1)
+                    firetouchinterest(ball, attach, 0)
+                    firetouchinterest(ball, attach, 1)
                 end)
             end
         end
@@ -349,11 +354,21 @@ local function CheckBallCollisions()
 end
 
 RunService.Heartbeat:Connect(function()
-    if not reachSettings.SphereEnabled then return end
+    if not reachSettings.SphereEnabled then
+        if SphereHitbox then DestroySphere() end
+        return
+    end
+    if not Character or not Character.Parent then
+        Character = player.Character or Character
+        return
+    end
     if not SphereHitbox or not SphereHitbox.Parent then
         CreateSphere()
         return
     end
+    local now = tick()
+    if now - lastCheck < reachSettings.UpdateInterval then return end
+    lastCheck = now
     pcall(CheckBallCollisions)
 end)
 
@@ -361,11 +376,15 @@ player.CharacterAdded:Connect(function(c)
     Character = c
     DestroySphere()
     task.wait(1)
-    CreateSphere()
+    if reachSettings.SphereEnabled then
+        CreateSphere()
+    end
 end)
 
 task.wait(1)
-CreateSphere()
+if reachSettings.SphereEnabled then
+    CreateSphere()
+end
 
 -- hi >_<
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
@@ -441,6 +460,15 @@ SphereSection:Slider({
     Value = { Min = 0, Max = 3, Default = reachSettings.HeadExcludeMargin },
     Callback = function(v)
         reachSettings.HeadExcludeMargin = v
+    end,
+})
+
+SphereSection:Slider({
+    Title = "Update Interval (s)",
+    Step = 0.01,
+    Value = { Min = 0.01, Max = 0.3, Default = reachSettings.UpdateInterval },
+    Callback = function(v)
+        reachSettings.UpdateInterval = v
     end,
 })
 
@@ -1111,9 +1139,7 @@ ExploitSection:Button({
                 local tpsSystem = workspace:FindFirstChild("TPSSystem")
 
                 if practice then watchFolder(practice) end
-                if tpsSystem then watchFolder(tpsSystem) end
-
-                RunService.Heartbeat:Connect(scanAllNearby)
+                if tpsSystem then watchFolder(tpsSystem) end                RunService.Heartbeat:Connect(scanAllNearby)
             end)
 
             WindUI:Notify({
@@ -2667,8 +2693,7 @@ GKSection:Button({
 
 -- ============================================================
 -- CUSTOM CONTROLS (MOBILE) — URL-loaded, text 7-5 style UI
---   Local buttons: K1+SAVE, JUMP K1+SV (instant)
---   Jump uses ReplicatedStorage.Managers.BManager.Animate.jump (no VIM)
+--   K1+SAVE (with keepToSave delay), JUMP K1+SV (Animate.jump)
 -- ============================================================
 local Http  = game:GetService("HttpService")
 local lpCC  = game:GetService("Players").LocalPlayer
@@ -2686,6 +2711,7 @@ end
 
 local CC = {
     mobEnabled = false,
+    keepToSave = 0.08,
     btn = { size = 88, opacity = 0.88, locked = false, visible = false },
     positions = {},
 }
@@ -2768,12 +2794,15 @@ end
 
 local function macro_KeepSave()
     ccKeep1()
+    task.wait(CC.keepToSave)
     ccSave()
 end
 
 local function macro_JumpKeepSave()
     ccJump()
+    task.wait(CC.keepToSave)
     ccKeep1()
+    task.wait(CC.keepToSave)
     ccSave()
 end
 
@@ -2808,9 +2837,10 @@ local function ccBuildPayload()
         pout[id] = { xs=ud.X.Scale, xo=ud.X.Offset, ys=ud.Y.Scale, yo=ud.Y.Offset }
     end
     return {
-        v = 5,
+        v = 6,
         btn = { size = CC.btn.size, opacity = CC.btn.opacity, locked = CC.btn.locked },
         positions = pout,
+        timings = { keepToSave = CC.keepToSave },
     }
 end
 
@@ -2826,6 +2856,11 @@ local function ccApplyPayload(d)
             if type(p) == "table" and p.xs and p.xo and p.ys and p.yo then
                 CC.positions[id] = UDim2.new(p.xs, p.xo, p.ys, p.yo)
             end
+        end
+    end
+    if type(d.timings) == "table" then
+        for k, v in pairs(d.timings) do
+            if CC[k] ~= nil and type(v) == type(CC[k]) then CC[k] = v end
         end
     end
 end
@@ -3176,6 +3211,12 @@ CCMob:Slider({
     Callback = function(v) CC.btn.opacity = v ccSyncOpacity() ccSaveState() end,
 })
 
+CCMob:Slider({
+    Title = "Keep → Save Gap", Step = 0.01, Suffix = "s",
+    Value = { Min=0.00, Max=0.50, Default=CC.keepToSave },
+    Callback = function(v) CC.keepToSave = v ccSaveState() end,
+})
+
 CCMob:Button({
     Title = "Save Layout + Settings", Justify = "Center", Icon = "",
     Callback = function() ccSaveState() end,
@@ -3192,7 +3233,7 @@ local Dialog = Window:Dialog({
                 print("hi")
             end
         }
-    },
+    }
 })
 
 WindUI:Notify({
