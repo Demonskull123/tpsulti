@@ -2921,9 +2921,15 @@ if ccCanSave and type(makefolder) == "function"
 end
 
 local CC = {
-    mobEnabled = false,
+    mobEnabled = true,
     keepToSave = 0.08,
-    btn = { size = 88, opacity = 0.88, locked = false, visible = false },
+    btn = {
+        size         = 88,
+        opacity      = 0.88,
+        transparency = 0.12,
+        locked       = false,
+        visible      = true,
+    },
     positions = {},
 }
 
@@ -3048,8 +3054,13 @@ local function ccBuildPayload()
         pout[id] = { xs=ud.X.Scale, xo=ud.X.Offset, ys=ud.Y.Scale, yo=ud.Y.Offset }
     end
     return {
-        v = 6,
-        btn = { size = CC.btn.size, opacity = CC.btn.opacity, locked = CC.btn.locked },
+        v = 7,
+        btn = {
+            size         = CC.btn.size,
+            opacity      = CC.btn.opacity,
+            transparency = CC.btn.transparency,
+            locked       = CC.btn.locked,
+        },
         positions = pout,
         timings = { keepToSave = CC.keepToSave },
     }
@@ -3058,9 +3069,10 @@ end
 local function ccApplyPayload(d)
     if type(d) ~= "table" then return end
     if type(d.btn) == "table" then
-        if type(d.btn.size)    == "number"  then CC.btn.size    = d.btn.size end
-        if type(d.btn.opacity) == "number"  then CC.btn.opacity = d.btn.opacity end
-        if type(d.btn.locked)  == "boolean" then CC.btn.locked  = d.btn.locked end
+        if type(d.btn.size)         == "number"  then CC.btn.size         = d.btn.size end
+        if type(d.btn.opacity)      == "number"  then CC.btn.opacity      = d.btn.opacity end
+        if type(d.btn.transparency) == "number"  then CC.btn.transparency = d.btn.transparency end
+        if type(d.btn.locked)       == "boolean" then CC.btn.locked       = d.btn.locked end
     end
     if type(d.positions) == "table" then
         for id, p in pairs(d.positions) do
@@ -3143,13 +3155,16 @@ local function ccAddButton(def)
     btn.Size                   = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
     btn.Position               = pos
     btn.BackgroundColor3       = Color3.fromRGB(22, 22, 28)
-    btn.BackgroundTransparency = 1 - CC.btn.opacity
+    btn.BackgroundTransparency = CC.btn.transparency
     btn.TextColor3             = Color3.fromRGB(0, 255, 130)
+    btn.TextTransparency       = CC.btn.transparency
     btn.Font                   = Enum.Font.GothamBold
     btn.TextSize               = 14
     btn.Text                   = def.label or def.id
     btn.BorderSizePixel        = 0
     btn.Active                 = true
+    btn.Visible                = true
+    btn.AutoButtonColor        = false
     btn.Parent                 = ccGui
 
     local corner = Instance.new("UICorner")
@@ -3159,7 +3174,7 @@ local function ccAddButton(def)
     local stroke = Instance.new("UIStroke")
     stroke.Color = CC.btn.locked and Color3.fromRGB(0,255,130) or Color3.fromRGB(255,200,60)
     stroke.Thickness = 1.4
-    stroke.Transparency = 0.35
+    stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
     stroke.Parent = btn
 
     local dragging, dragStart, startPos, fired = false, nil, nil, false
@@ -3219,7 +3234,13 @@ local function ccSyncSizes()
 end
 local function ccSyncOpacity()
     for _, r in pairs(ccRefs) do
-        r.btn.BackgroundTransparency = 1 - CC.btn.opacity
+        r.btn.BackgroundTransparency = CC.btn.transparency
+        r.btn.TextTransparency       = CC.btn.transparency
+        if r.stroke then
+            r.stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
+        end
+        r.btn.Visible = true
+        r.btn.Active  = true
     end
 end
 local function ccSyncLock()
@@ -3232,74 +3253,6 @@ end
 CC_API.SyncSizes   = ccSyncSizes
 CC_API.SyncOpacity = ccSyncOpacity
 CC_API.SyncLock    = ccSyncLock
-
--- ============================================================
--- AUTO-SHOW MOBILE BUTTONS ONLY WHEN GK TOOL EQUIPPED
--- ============================================================
-local CC_AUTO_SHOW = true
-local CC_lastEquipped = nil
-
-local function ccIsGkToolEquipped()
-    local ch = lpCC.Character
-    if not ch then return false end
-    for _, t in ipairs(ch:GetChildren()) do
-        if t:IsA("Tool") then
-            local n = t.Name
-            if n == "ToolGGK" or n == "ToolBGK" then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function ccApplyAutoVisibility()
-    if not CC_AUTO_SHOW then return end
-    local equipped = ccIsGkToolEquipped()
-    if equipped == CC_lastEquipped then return end
-    CC_lastEquipped = equipped
-    CC.btn.visible = equipped
-    CC.mobEnabled  = equipped
-    ccGui.Enabled  = equipped
-    ccSaveState()
-end
-
-do
-    local ch = lpCC.Character
-    if ch then
-        ch.ChildAdded:Connect(function(c)
-            if c:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
-        end)
-        ch.ChildRemoved:Connect(function(c)
-            if c:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
-        end)
-    end
-    lpCC.CharacterAdded:Connect(function(c)
-        task.wait(1)
-        c.ChildAdded:Connect(function(x)
-            if x:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
-        end)
-        c.ChildRemoved:Connect(function(x)
-            if x:IsA("Tool") then task.wait() ccApplyAutoVisibility() end
-        end)
-        ccApplyAutoVisibility()
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        ccApplyAutoVisibility()
-    end
-end)
-
-CC_API.SetAutoShow = function(v)
-    CC_AUTO_SHOW = v
-    if not v then
-        ccApplyAutoVisibility()
-    end
-end
-CC_API.RefreshAutoShow = ccApplyAutoVisibility
 
 local CCSection = MiscTab:Section({ Title = "Custom Controls" })
 
@@ -3462,49 +3415,30 @@ CCSection:Input({
 local CCMob = MiscTab:Section({ Title = "Custom Controls (Mobile GK)" })
 
 CCMob:Toggle({
-    Title = "Auto-Show Only When GK Tool Equipped",
-    Default = true,
-    Callback = function(v)
-        CC_AUTO_SHOW = v
-        if v then
-            ccApplyAutoVisibility()
-        end
-    end,
-})
-
-CCMob:Toggle({
-    Title = "Force Show Buttons",
-    Default = CC.btn.visible,
-    Callback = function(v)
-        if CC_AUTO_SHOW then return end
-        CC.btn.visible = v
-        CC.mobEnabled  = v
-        ccGui.Enabled  = v
-        ccSaveState()
-    end,
-})
-
-CCMob:Toggle({
     Title = "Lock Buttons (tap = run)",
     Default = CC.btn.locked,
     Callback = function(v) CC.btn.locked = v ccSyncLock() ccSaveState() end,
 })
 
 CCMob:Slider({
+    Title = "Button Transparency", Step = 0.01,
+    Value = { Min = 0, Max = 1, Default = CC.btn.transparency },
+    Callback = function(v)
+        CC.btn.transparency = v
+        ccSyncOpacity()
+        ccSaveState()
+    end,
+})
+
+CCMob:Slider({
     Title = "Button Size", Step = 2, Suffix = " px",
-    Value = { Min=40, Max=180, Default=CC.btn.size },
+    Value = { Min = 40, Max = 180, Default = CC.btn.size },
     Callback = function(v) CC.btn.size = v ccSyncSizes() ccSaveState() end,
 })
 
 CCMob:Slider({
-    Title = "Button Opacity", Step = 0.05,
-    Value = { Min=0.1, Max=1, Default=CC.btn.opacity },
-    Callback = function(v) CC.btn.opacity = v ccSyncOpacity() ccSaveState() end,
-})
-
-CCMob:Slider({
     Title = "Keep → Save Gap", Step = 0.01, Suffix = "s",
-    Value = { Min=0.00, Max=0.50, Default=CC.keepToSave },
+    Value = { Min = 0.00, Max = 0.50, Default = CC.keepToSave },
     Callback = function(v) CC.keepToSave = v ccSaveState() end,
 })
 
