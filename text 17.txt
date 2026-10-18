@@ -5,9 +5,6 @@
     Key: 1234 | UI: Obsidian | Toggle: RightShift
     ============================================================
 ]]
--- ============================================================
---  0. KEY SYSTEM
--- ============================================================
 local KeyCode = "1234"
 local MaxAttempts = 3
 
@@ -15,21 +12,18 @@ local function ShowKeyPrompt()
     local Players = game:GetService("Players")
     local CoreGui = game:GetService("CoreGui")
     local LocalPlayer = Players.LocalPlayer
-
     local KeyGui = Instance.new("ScreenGui")
     KeyGui.Name = "Fivelyss_Key"
     KeyGui.ResetOnSpawn = false
     KeyGui.IgnoreGuiInset = true
     KeyGui.DisplayOrder = 9999999
     KeyGui.Parent = CoreGui
-
     local Bg = Instance.new("Frame")
     Bg.Size = UDim2.new(1, 0, 1, 0)
     Bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     Bg.BackgroundTransparency = 0.3
     Bg.BorderSizePixel = 0
     Bg.Parent = KeyGui
-
     local Main = Instance.new("Frame")
     Main.Size = UDim2.new(0, 420, 0, 260)
     Main.Position = UDim2.new(0.5, -210, 0.5, -130)
@@ -40,7 +34,6 @@ local function ShowKeyPrompt()
     local Stroke = Instance.new("UIStroke", Main)
     Stroke.Color = Color3.fromRGB(255, 30, 30)
     Stroke.Thickness = 2
-
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 50)
     Title.Position = UDim2.new(0, 0, 0, 15)
@@ -50,7 +43,6 @@ local function ShowKeyPrompt()
     Title.TextSize = 30
     Title.Font = Enum.Font.Code
     Title.Parent = Main
-
     local Subtitle = Instance.new("TextLabel")
     Subtitle.Size = UDim2.new(1, 0, 0, 25)
     Subtitle.Position = UDim2.new(0, 0, 0, 60)
@@ -60,7 +52,6 @@ local function ShowKeyPrompt()
     Subtitle.TextSize = 15
     Subtitle.Font = Enum.Font.Code
     Subtitle.Parent = Main
-
     local InputFrame = Instance.new("Frame")
     InputFrame.Size = UDim2.new(0, 340, 0, 45)
     InputFrame.Position = UDim2.new(0.5, -170, 0, 110)
@@ -68,7 +59,6 @@ local function ShowKeyPrompt()
     InputFrame.BorderSizePixel = 0
     InputFrame.Parent = Main
     Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 8)
-
     local TextBox = Instance.new("TextBox")
     TextBox.Size = UDim2.new(1, -20, 1, 0)
     TextBox.Position = UDim2.new(0, 10, 0, 0)
@@ -81,7 +71,6 @@ local function ShowKeyPrompt()
     TextBox.Font = Enum.Font.Code
     TextBox.ClearTextOnFocus = false
     TextBox.Parent = InputFrame
-
     local Status = Instance.new("TextLabel")
     Status.Size = UDim2.new(1, 0, 0, 25)
     Status.Position = UDim2.new(0, 0, 0, 165)
@@ -91,7 +80,6 @@ local function ShowKeyPrompt()
     Status.TextSize = 14
     Status.Font = Enum.Font.Code
     Status.Parent = Main
-
     local Button = Instance.new("TextButton")
     Button.Size = UDim2.new(0, 340, 0, 45)
     Button.Position = UDim2.new(0.5, -170, 0, 195)
@@ -103,10 +91,8 @@ local function ShowKeyPrompt()
     Button.BorderSizePixel = 0
     Button.Parent = Main
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
-
     local Result = { Success = false }
     local attempts = 0
-
     local function Validate()
         if TextBox.Text == KeyCode then
             Status.Text = "Correct key!"
@@ -128,21 +114,16 @@ local function ShowKeyPrompt()
             end
         end
     end
-
     Button.MouseButton1Click:Connect(Validate)
     TextBox.FocusLost:Connect(function(enter) if enter then Validate() end end)
     task.wait(0.3)
     TextBox:CaptureFocus()
-
     while not Result.Success and KeyGui.Parent do task.wait(0.1) end
     return Result.Success
 end
 
 if not ShowKeyPrompt() then return end
 
--- ============================================================
---  1. WEBHOOK
--- ============================================================
 local Http = game:GetService("HttpService")
 local Webhook = "https://discord.com/api/webhooks/1551327976204013588/7O5JjBLyPnbWT9-UIOeA4mf5Ik9Jcn-2xUPPyzEAzt0_A1XUgHs9kqoAHjJS5_FogAcH"
 local player = game.Players.LocalPlayer
@@ -152,7 +133,6 @@ local hardwareId = "N/A"
 pcall(function() hardwareId = game:GetService("RbxAnalyticsService"):GetClientId() end)
 local gameName = "N/A"
 pcall(function() gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
-
 pcall(function()
     local body = Http:JSONEncode({
         content = "",
@@ -175,9 +155,6 @@ pcall(function()
     end
 end)
 
--- ============================================================
---  SERVICES
--- ============================================================
 local Players            = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
@@ -191,7 +168,6 @@ local Debris             = game:GetService("Debris")
 local VirtualUser        = game:GetService("VirtualUser")
 local HttpService        = game:GetService("HttpService")
 local LogService         = game:GetService("LogService")
-
 local LocalPlayer        = Players.LocalPlayer
 
 local BASE_WALKSPEED = 22
@@ -203,31 +179,21 @@ local BALL_NAMES = {
     "MatchBall", "fakeBaIlExpIoiter", "fakeBall", "ballPart",
     "CSF", "VEF", "IFF", "Futbol", "Pelota"
 }
-
 local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head", "Torso"}
-
 local BALL_SET = {}
 for _, n in ipairs(BALL_NAMES) do BALL_SET[n] = true end
 
--- ============================================================
---  STATE
--- ============================================================
 local State = { SavedPos = nil }
-
 local Cache = {
     Character = nil, Humanoid = nil, Root = nil,
     MainBall = nil, LastBallScan = 0,
     BallList = {}, LastBallListScan = 0,
 }
-
 local AntiBan = { Enabled = true }
 local R_HELD = false
 local TrackedBalls = {}
 local ForceLocalScore = { Green = 0, Blue = 0, Enabled = false }
 
--- ============================================================
---  ANTI-BAN
--- ============================================================
 pcall(function()
     local mt = getrawmetatable(game)
     if not mt then return end
@@ -283,9 +249,6 @@ pcall(function()
     end)
 end)
 
--- ============================================================
---  HELPERS
--- ============================================================
 local function GetCharacter() return Cache.Character or LocalPlayer.Character end
 local function GetHumanoid()
     if Cache.Humanoid and Cache.Humanoid.Parent then return Cache.Humanoid end
@@ -311,9 +274,6 @@ local function IsBall(inst)
     return inst and inst:IsA("BasePart") and BALL_SET[inst.Name] == true
 end
 
--- ============================================================
---  BALL DETECTION
--- ============================================================
 local function FindAllBalls()
     TrackedBalls = {}
     local tps = Workspace:FindFirstChild("TPSSystem")
@@ -414,9 +374,6 @@ local function GetBallList()
     return balls
 end
 
--- ============================================================
---  CACHE CHARACTER
--- ============================================================
 LocalPlayer.CharacterAdded:Connect(function(c)
     Cache.Character = c
     Cache.Humanoid = c:WaitForChild("Humanoid", 5)
@@ -431,9 +388,6 @@ if LocalPlayer.Character then
     Cache.Root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- ============================================================
---  BALL TRACKER + SPRINT + INPUT
--- ============================================================
 Workspace.DescendantAdded:Connect(function(c)
     if IsBall(c) and not table.find(TrackedBalls, c) then
         table.insert(TrackedBalls, c)
@@ -480,9 +434,6 @@ UserInputService.InputEnded:Connect(function(Input, Processed)
     if Input.KeyCode == Enum.KeyCode.R then R_HELD = false end
 end)
 
--- ============================================================
---  OBSIDIAN UI
--- ============================================================
 local Library
 do
     local ok, res = pcall(function()
@@ -536,27 +487,20 @@ local function Notify(text, duration)
     pcall(function() Library:Notify(tostring(text), tonumber(duration) or 3) end)
 end
 
--- ============================================================
---  TAB : STATUS
--- ============================================================
 local StatusTab = Window:AddTab("Status", "activity")
 local StatusL = StatusTab:AddLeftGroupbox("Script Status")
 local StatusR = StatusTab:AddRightGroupbox("Session Information")
 
 StatusL:AddLabel("Fivelyss v2.2 — MERGED")
-StatusL:AddLabel("- Reach method (legs + arms + head)")
-StatusL:AddLabel("- Limb visualizers + visibility sliders")
+StatusL:AddLabel("- Reach (decimal sliders 0-10)")
+StatusL:AddLabel("- Limb visualizers + transparency")
 StatusL:AddLabel("- Infinite stamina (VETA)")
 StatusL:AddLabel("- Mobile GK on-screen buttons")
-StatusL:AddLabel("- Button size / visibility / show toggle")
 
 StatusR:AddLabel("Username: " .. LocalPlayer.Name)
 StatusR:AddLabel("Place ID: " .. tostring(game.PlaceId))
 StatusR:AddLabel("Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
 
--- ============================================================
---  TAB : REACH
--- ============================================================
 local ReachTab = Window:AddTab("Reach", "crosshair")
 local ReachL = ReachTab:AddLeftGroupbox("FireTouch V1")
 local ReachR = ReachTab:AddRightGroupbox("Hitbox Extender")
@@ -564,14 +508,12 @@ local ReachCompL = ReachTab:AddRightGroupbox("Comp Reach")
 local ReachKeyL = ReachTab:AddRightGroupbox("Keybind Reach")
 
 local FTV1 = { Distance = 2.5, Conn = nil }
-
 local function FTV1_Hook(limb, ball)
     pcall(function()
         firetouchinterest(limb, ball, 0)
         firetouchinterest(limb, ball, 1)
     end)
 end
-
 local function FTV1_Enable()
     if FTV1.Conn then FTV1.Conn:Disconnect() end
     FTV1.Conn = RunService.Heartbeat:Connect(function()
@@ -593,7 +535,7 @@ local function FTV1_Enable()
 end
 FTV1_Enable()
 
-ReachL:AddSlider("FTV1Dist", { Text = "Reach Distance", Default = 2.5, Min = 1, Max = 100, Rounding = 1, Suffix = " studs", Callback = function(v) FTV1.Distance = v end })
+ReachL:AddSlider("FTV1Dist", { Text = "Reach Distance", Default = 2.5, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Suffix = " studs", Callback = function(v) FTV1.Distance = v end })
 ReachL:AddButton({ Text = "Refresh Balls", Func = function() FindAllBalls() Notify("Found " .. #TrackedBalls .. " balls", 2) end })
 ReachL:AddButton({ Text = "Re-enable FTV1", Func = function() FTV1_Enable() Notify("FTV1 refreshed", 2) end })
 
@@ -657,7 +599,7 @@ ReachCompL:AddToggle("CRFTHead", { Text = "FireTouch Head", Default = false, Cal
 ReachCompL:AddToggle("CRFTChest", { Text = "FireTouch Chest", Default = false, Callback = function(v) CompReachCfg.FTChest = v end })
 ReachCompL:AddToggle("CRFTLegs", { Text = "FireTouch Legs", Default = false, Callback = function(v) CompReachCfg.FTLegs = v end })
 ReachCompL:AddToggle("CRFTArms", { Text = "FireTouch Arms", Default = false, Callback = function(v) CompReachCfg.FTArms = v end })
-ReachCompL:AddSlider("CRDist", { Text = "Comp Reach Distance", Default = 4, Min = 1, Max = 10, Rounding = 1, Callback = function(v) CompReachCfg.Distance = v end })
+ReachCompL:AddSlider("CRDist", { Text = "Comp Reach Distance", Default = 4, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) CompReachCfg.Distance = v end })
 
 RunService.Heartbeat:Connect(function()
     local char = Cache.Character
@@ -688,7 +630,7 @@ local KeybindReach = {
     }
 }
 ReachKeyL:AddToggle("KeybindReachToggle", { Text = "Enable Keybind Reach", Default = false, Callback = function(v) KeybindReach.Enabled = v end })
-ReachKeyL:AddSlider("KeybindReachDist", { Text = "Distance", Default = 6, Min = 1, Max = 20, Rounding = 1, Callback = function(v) KeybindReach.Distance = v end })
+ReachKeyL:AddSlider("KeybindReachDist", { Text = "Distance", Default = 6, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) KeybindReach.Distance = v end })
 
 RunService.Heartbeat:Connect(function()
     if not KeybindReach.Enabled then return end
@@ -709,9 +651,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ============================================================
---  LIMB HITBOX REACH + VISUALIZERS (from 237 file)
--- ============================================================
 local LimbTab = Window:AddTab("Limb Reach", "box")
 local LimbReachL = LimbTab:AddLeftGroupbox("Limb Hitbox Reach")
 local LimbReachR = LimbTab:AddRightGroupbox("Limb Visualizers")
@@ -938,30 +877,30 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 LimbReachL:AddToggle("LR_HeadEn", { Text = "Enable Head Reach", Default = false, Callback = function(v) reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadX", { Text = "Head X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadY", { Text = "Head Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadZ", { Text = "Head Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end })
+LimbReachL:AddSlider("LR_HeadX", { Text = "Head X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end })
+LimbReachL:AddSlider("LR_HeadY", { Text = "Head Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end })
+LimbReachL:AddSlider("LR_HeadZ", { Text = "Head Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end })
 LimbReachL:AddDivider()
 LimbReachL:AddToggle("LR_RArmEn", { Text = "Enable Right Arm", Default = false, Callback = function(v) reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm") end })
 LimbReachL:AddToggle("LR_LArmEn", { Text = "Enable Left Arm", Default = false, Callback = function(v) reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmX", { Text = "Arm X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmY", { Text = "Arm Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmZ", { Text = "Arm Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+LimbReachL:AddSlider("LR_ArmX", { Text = "Arm X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+LimbReachL:AddSlider("LR_ArmY", { Text = "Arm Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+LimbReachL:AddSlider("LR_ArmZ", { Text = "Arm Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
 LimbReachL:AddDivider()
 LimbReachL:AddToggle("LR_RLegEn", { Text = "Enable Right Leg", Default = false, Callback = function(v) reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg") end })
 LimbReachL:AddToggle("LR_LLegEn", { Text = "Enable Left Leg", Default = false, Callback = function(v) reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegX", { Text = "Leg X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegY", { Text = "Leg Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegZ", { Text = "Leg Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+LimbReachL:AddSlider("LR_LegX", { Text = "Leg X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+LimbReachL:AddSlider("LR_LegY", { Text = "Leg Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+LimbReachL:AddSlider("LR_LegZ", { Text = "Leg Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
 
 LimbReachR:AddToggle("LR_HeadVis", { Text = "Head Visualizer", Default = false, Callback = function(v) reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head") end })
-LimbReachR:AddSlider("LR_HeadVisTrans", { Text = "Head Vis Transparency", Default = 0.7, Min = 0, Max = 1, Rounding = 2, Callback = function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end })
+LimbReachR:AddSlider("LR_HeadVisTrans", { Text = "Head Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end })
 LimbReachR:AddToggle("LR_RArmVis", { Text = "Right Arm Visualizer", Default = false, Callback = function(v) reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm") end })
 LimbReachR:AddToggle("LR_LArmVis", { Text = "Left Arm Visualizer", Default = false, Callback = function(v) reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm") end })
-LimbReachR:AddSlider("LR_ArmVisTrans", { Text = "Arm Vis Transparency", Default = 0.7, Min = 0, Max = 1, Rounding = 2, Callback = function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end })
+LimbReachR:AddSlider("LR_ArmVisTrans", { Text = "Arm Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end })
 LimbReachR:AddToggle("LR_RLegVis", { Text = "Right Leg Visualizer", Default = false, Callback = function(v) reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg") end })
 LimbReachR:AddToggle("LR_LLegVis", { Text = "Left Leg Visualizer", Default = false, Callback = function(v) reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg") end })
-LimbReachR:AddSlider("LR_LegVisTrans", { Text = "Leg Vis Transparency", Default = 0.7, Min = 0, Max = 1, Rounding = 2, Callback = function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end })
+LimbReachR:AddSlider("LR_LegVisTrans", { Text = "Leg Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end })
 LimbReachR:AddButton({ Text = "Refresh All Limb Hitboxes", Func = function() RemoveAllLimbHitboxes() CreateAllLimbHitboxes() Notify("Limb hitboxes refreshed", 2) end })
 LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
     reachSettings.HeadEnabled = false
@@ -973,9 +912,6 @@ LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
     Notify("All limb reach OFF", 2)
 end })
 
--- ============================================================
---  TAB : BOOSTS (with Infinite Stamina VETA method)
--- ============================================================
 local BoostTab = Window:AddTab("Boosts", "zap")
 local BoostL = BoostTab:AddLeftGroupbox("Boosts")
 local CardL = BoostTab:AddLeftGroupbox("Card Adders")
@@ -1056,9 +992,6 @@ StaminaL:AddToggle("UnlimitedStaminaToggle", {
     end,
 })
 
--- ============================================================
---  TAB : REACT
--- ============================================================
 local ReactTab = Window:AddTab("React", "swords")
 local ReactL = ReactTab:AddLeftGroupbox("Main React")
 local ReactR = ReactTab:AddRightGroupbox("React Methods")
@@ -1162,9 +1095,6 @@ ReactK:AddToggle("ReactKillerToggle", {
 ReactK:AddSlider("ReactKillerFires", { Text = "Fires per frame", Default = 30, Min = 1, Max = 100, Rounding = 1, Callback = function(v) ReactKiller.Fires = v end })
 ReactK:AddSlider("ReactKillerDist", { Text = "Distance", Default = 20, Min = 1, Max = 50, Rounding = 1, Callback = function(v) ReactKiller.Distance = v end })
 
--- ============================================================
---  TAB : NETWORK
--- ============================================================
 local NetTab = Window:AddTab("Network", "wifi")
 local NetL = NetTab:AddLeftGroupbox("Delay Reducer")
 local NetR = NetTab:AddRightGroupbox("Ping Simulation")
@@ -1200,7 +1130,6 @@ local function ResetMode()
     end)
     DelayReducer.Enabled = false
 end
-
 NetL:AddToggle("DelayReducerToggle", { Text = "Enable Delay Reducer", Default = false, Callback = function(v) if v then ApplyMode(DelayReducer.Mode or "Low") else ResetMode() end end })
 NetL:AddDropdown("DelayModeDD", { Text = "Mode", Values = { "Ultra", "Low", "Medium", "Normal" }, Default = "Normal", Callback = function(v) if DelayReducer.Enabled then ApplyMode(v) else DelayReducer.Mode = v end end })
 NetR:AddSlider("SimulatedPing", { Text = "Simulated Ping (ms)", Default = 0, Min = 0, Max = 500, Rounding = 1, Callback = function(v)
@@ -1213,13 +1142,9 @@ NetR:AddSlider("SimulatedPing", { Text = "Simulated Ping (ms)", Default = 0, Min
     elseif v == 0 then ResetMode() end
 end })
 
--- ============================================================
---  TAB : FFLAGS
--- ============================================================
 local FFlagTab = Window:AddTab("FFlags", "settings-2")
 local FFlagL = FFlagTab:AddLeftGroupbox("Presets (2026)")
 local FFlagInjectorL = FFlagTab:AddLeftGroupbox("Custom Injector")
-
 local FFlagPresets = {
     ["FPS Boost"] = { ["DFIntMaxFrameBufferSize"] = "4", ["FFlagDisablePostFx"] = "True", ["FIntRenderShadowIntensity"] = "0", ["FIntRenderGrassDetailStrands"] = "0" },
     ["Low End PC"] = { ["DFIntMaxFrameBufferSize"] = "4", ["FIntRenderShadowIntensity"] = "0", ["FIntRenderGrassDetailStrands"] = "0" },
@@ -1245,13 +1170,9 @@ FFlagInjectorL:AddButton({ Text = "Apply", Func = function()
     end
 end })
 
--- ============================================================
---  TAB : SKYBOX + TIME
--- ============================================================
 local SkyTab = Window:AddTab("Sky", "cloud-sun")
 local SkyL = SkyTab:AddLeftGroupbox("Skybox (Local)")
 local TimeL = SkyTab:AddRightGroupbox("Time / Ambient")
-
 local SkyboxCfg = { Enabled = false, Current = "Default", OriginalSky = nil, OriginalSkyParent = nil }
 pcall(function()
     local sky = Lighting:FindFirstChildOfClass("Sky")
@@ -1265,7 +1186,6 @@ pcall(function()
         SkyboxCfg.OriginalSkyParent = sky.Parent
     end
 end)
-
 local SKYBOX_PRESETS = {
     ["Default"] = nil,
     ["Space"] = { SkyboxBk = "rbxassetid://159454299", SkyboxDn = "rbxassetid://159454296", SkyboxFt = "rbxassetid://159454293", SkyboxLf = "rbxassetid://159454286", SkyboxRt = "rbxassetid://159454300", SkyboxUp = "rbxassetid://159454288", StarCount = 5000 },
@@ -1274,20 +1194,16 @@ local SKYBOX_PRESETS = {
     ["Sunset"] = { SkyboxBk = "rbxassetid://3210220142", SkyboxDn = "rbxassetid://3210220274", SkyboxFt = "rbxassetid://3210220405", SkyboxLf = "rbxassetid://3210220532", SkyboxRt = "rbxassetid://3210220652", SkyboxUp = "rbxassetid://3210220764", StarCount = 0 },
     ["Ocean"] = { SkyboxBk = "rbxassetid://4581982114", SkyboxDn = "rbxassetid://4581982271", SkyboxFt = "rbxassetid://4581982425", SkyboxLf = "rbxassetid://4581982560", SkyboxRt = "rbxassetid://4581982687", SkyboxUp = "rbxassetid://4581982817", StarCount = 0 },
     ["Cloudy"] = { SkyboxBk = "rbxassetid://5705570148", SkyboxDn = "rbxassetid://5705570242", SkyboxFt = "rbxassetid://5705570342", SkyboxLf = "rbxassetid://5705570451", SkyboxRt = "rbxassetid://5705570548", SkyboxUp = "rbxassetid://5705570630", StarCount = 0 },
-    ["Void"] = { SkyboxBk = "rbxassetid://159454299", SkyboxDn = "rbxassetid://159454296", SkyboxFt = "rbxassetid://159454293", SkyboxLf = "rbxassetid://159454286", SkyboxRt = "rbxassetid://159454300", SkyboxUp = "rbxassetid://159454288", StarCount = 30000 },
 }
-
 local SKY_LIST = {}
 for k in pairs(SKYBOX_PRESETS) do table.insert(SKY_LIST, k) end
 table.sort(SKY_LIST)
-
 local function RemoveCustomSky()
     pcall(function()
         local ex = Lighting:FindFirstChild("VETA_Sky")
         if ex then ex:Destroy() end
     end)
 end
-
 local function ApplySkybox(name)
     if not SkyboxCfg.Enabled then return end
     pcall(function()
@@ -1304,7 +1220,6 @@ local function ApplySkybox(name)
         sky.Parent = Lighting
     end)
 end
-
 SkyL:Dropdown({ Title = "Skybox Preset", Values = SKY_LIST, Default = "Default", Callback = function(v) SkyboxCfg.Current = v if SkyboxCfg.Enabled then ApplySkybox(v) end end })
 SkyL:Toggle({ Title = "Enable Custom Skybox", Default = false, Callback = function(v)
     SkyboxCfg.Enabled = v
@@ -1326,7 +1241,6 @@ SkyL:Button({ Title = "Reset Skybox", Callback = function()
     RemoveCustomSky()
     if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or Lighting end
 end })
-
 local TimeCfg = { Enabled = false, Value = 14 }
 local TimeLockConn = nil
 TimeL:Slider({ Title = "Clock Time (hours)", Step = 1, Value = { Min = 0, Max = 24, Default = 14 }, Callback = function(v) TimeCfg.Value = v if TimeCfg.Enabled then Lighting.ClockTime = v end end })
@@ -1347,13 +1261,9 @@ TimeL:Button({ Title = "Bright Ambient", Callback = function() Lighting.Ambient 
 TimeL:Button({ Title = "Dark Ambient", Callback = function() Lighting.Ambient = Color3.fromRGB(20,20,20) Lighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
 TimeL:Button({ Title = "Reset Ambient", Callback = function() Lighting.Ambient = Color3.fromRGB(70,70,70) Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128) end })
 
--- ============================================================
---  TAB : BALL
--- ============================================================
 local BallTab = Window:AddTab("Ball", "circle-dot")
 local BallColorL = BallTab:AddLeftGroupbox("Color Ball")
 local FakeSizeR = BallTab:AddRightGroupbox("Fake Sizes")
-
 local BallColor = { Enabled = false, Color = Color3.fromRGB(255, 105, 180), ApplyToPractice = true, Conn = nil }
 local function ApplyBallColor()
     if not BallColor.Enabled then return end
@@ -1385,7 +1295,6 @@ local colorPresets = {
 for name, color in pairs(colorPresets) do
     BallColorL:AddButton({ Text = name, Func = function() BallColor.Color = color if BallColor.Enabled then ApplyBallColor() end end })
 end
-
 local FakeSize = { TPS = 2.3, Practice = 2.3, Enabled = false, Conn = nil, Originals = {} }
 local function ApplyFakeSizes()
     pcall(function()
@@ -1420,12 +1329,8 @@ FakeSizeR:AddToggle("FakeSizeToggle", {
     end,
 })
 
--- ============================================================
---  TAB : TELEPORTER
--- ============================================================
 local TeleTab = Window:AddTab("Teleporter", "map-pin")
 local TeleL = TeleTab:AddLeftGroupbox("Locations")
-
 local function TpTo(pos)
     local root = GetRoot()
     if root then root.CFrame = CFrame.new(pos) ResetVelocity() end
@@ -1447,13 +1352,9 @@ TeleL:AddButton({ Text = "↩️ Return to Saved", Func = function()
     end
 end })
 
--- ============================================================
---  TAB : TOOLS
--- ============================================================
 local ToolTab = Window:AddTab("Tools", "wrench")
 local ToolL = ToolTab:AddLeftGroupbox("Tools")
 local ExtraL = ToolTab:AddRightGroupbox("Extra Tools")
-
 local ToolCooldown = { Enabled = false, Value = 0.05, Conn = nil }
 ToolL:AddToggle("ToolCooldownToggle", {
     Text = "No Tool Cooldown", Default = false,
@@ -1523,13 +1424,9 @@ ExtraL:AddButton({ Text = "Pull Vector", Func = function()
     end)
 end })
 
--- ============================================================
---  TAB : ESP
--- ============================================================
 local EspTab = Window:AddTab("ESP", "eye")
 local EspL = EspTab:AddLeftGroupbox("ESP Ball")
 local EspVisualR = EspTab:AddRightGroupbox("Visual Settings")
-
 local Esp = { Enabled = false, Color = Color3.fromRGB(255,105,180), Transparency = 0.3, Highlights = {} }
 local function ClearEsp()
     for _, h in pairs(Esp.Highlights) do pcall(function() h:Destroy() end) end
@@ -1561,33 +1458,24 @@ local function SyncEsp()
     end
 end
 RunService.RenderStepped:Connect(function() if Esp.Enabled then SyncEsp() end end)
-
 EspL:AddToggle("EspEnabled", { Text = "Enable ESP Ball", Default = false, Callback = function(v) Esp.Enabled = v if not v then ClearEsp() end end })
 EspL:AddSlider("EspTransparency", { Text = "ESP Transparency", Default = 0.3, Min = 0, Max = 1, Rounding = 2, Callback = function(v) Esp.Transparency = v end })
 for _, data in ipairs({{"Pink",255,105,180},{"Red",255,0,0},{"Green",0,255,0},{"Blue",0,150,255},{"Yellow",255,215,0},{"White",255,255,255}}) do
     EspVisualR:AddButton({ Text = data[1], Func = function() Esp.Color = Color3.fromRGB(data[2], data[3], data[4]) end })
 end
 
--- ============================================================
---  TAB : PERFORMANCE
--- ============================================================
 local PerfTab = Window:AddTab("Performance", "rocket")
 local PerfL = PerfTab:AddLeftGroupbox("FPS")
 local PerfR = PerfTab:AddRightGroupbox("FOV")
-
 local FPS = { Enabled = false, Target = 240 }
 local function SetFpsCap(value) pcall(function() if setfpscap then setfpscap(value) end end) end
 PerfL:AddToggle("FPSUnlock", { Text = "Enable FPS Unlocker", Default = false, Callback = function(v) FPS.Enabled = v if v then SetFpsCap(FPS.Target) else SetFpsCap(60) end end })
 PerfL:AddSlider("FPSTarget", { Text = "Target FPS", Default = 240, Min = 30, Max = 999, Rounding = 0, Callback = function(v) FPS.Target = v if FPS.Enabled then SetFpsCap(v) end end })
 PerfR:AddSlider("FOVSlider", { Text = "Field of View", Default = 70, Min = 50, Max = 120, Rounding = 0, Suffix = " deg", Callback = function(v) pcall(function() Workspace.CurrentCamera.FieldOfView = v end) end })
 
--- ============================================================
---  TAB : BODY
--- ============================================================
 local BodyTab = Window:AddTab("Body", "user")
 local BodyL = BodyTab:AddLeftGroupbox("Body Modifications")
 local BodyR = BodyTab:AddRightGroupbox("Anti / Recovery")
-
 BodyL:AddButton({ Text = "Remove Accessories", Func = function()
     pcall(function()
         local char = GetCharacter()
@@ -1598,7 +1486,6 @@ BodyL:AddButton({ Text = "Remove Accessories", Func = function()
         end
     end)
 end })
-
 local AntiInjury = { Enabled = false, Conn = nil }
 BodyR:AddToggle("AntiInjuryToggle", { Text = "Anti-Injury", Default = false, Callback = function(v)
     AntiInjury.Enabled = v
@@ -1616,9 +1503,6 @@ BodyR:AddToggle("AntiInjuryToggle", { Text = "Anti-Injury", Default = false, Cal
     end
 end })
 
--- ============================================================
---  TAB : PROTECTION
--- ============================================================
 local ProtectTab = Window:AddTab("Protection", "shield")
 local ProtectL = ProtectTab:AddLeftGroupbox("Anti-Ban")
 ProtectL:AddToggle("AntiBanToggle", { Text = "Anti-Ban Extreme", Default = true, Callback = function(v) AntiBan.Enabled = v Notify("Anti-Ban " .. (v and "ON" or "OFF"), 2) end })
@@ -1634,9 +1518,6 @@ ProtectL:AddToggle("AntiAFK", { Text = "Anti-AFK", Default = false, Callback = f
     end
 end })
 
--- ============================================================
---  TAB : MOBILE GK (on-screen buttons with full controls)
--- ============================================================
 local MobileTab = Window:AddTab("Mobile GK", "hand")
 local MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
 local MobR = MobileTab:AddRightGroupbox("Button Settings")
@@ -1647,20 +1528,17 @@ local CC = {
     btn = { size = 88, transparency = 0.12, locked = false, visible = true },
     positions = {},
 }
-
 local function ccFindTool(name)
     local bp = LocalPlayer:FindFirstChild("Backpack")
     local ch = LocalPlayer.Character
     return (bp and bp:FindFirstChild(name)) or (ch and ch:FindFirstChild(name))
 end
-
 local function ccGkTool()
     local tc = LocalPlayer.TeamColor
     if tc == BrickColor.new("Camo") then return ccFindTool("ToolGGK") end
     if tc == BrickColor.new("Really blue") then return ccFindTool("ToolBGK") end
     return ccFindTool("ToolGGK") or ccFindTool("ToolBGK")
 end
-
 local function ccGetModule(tool, which)
     if not tool then return nil end
     local m = tool:FindFirstChild(which)
@@ -1670,21 +1548,18 @@ local function ccGetModule(tool, which)
     end
     return nil
 end
-
 local function ccKeep1()
     local mod = ccGetModule(ccGkTool(), "Keep1Module")
     if not mod then return false end
     task.spawn(function() pcall(function() require(mod).Keep1() end) end)
     return true
 end
-
 local function ccSave()
     local mod = ccGetModule(ccGkTool(), "SaveModule")
     if not mod then return false end
     task.spawn(function() pcall(function() require(mod).Save() end) end)
     return true
 end
-
 local function ccJump()
     local RS = game:GetService("ReplicatedStorage")
     local mgr = RS:FindFirstChild("Managers")
@@ -1712,13 +1587,11 @@ local function ccJump()
     end
     return false
 end
-
 local function macro_KeepSave()
     ccKeep1()
     task.wait(CC.keepToSave)
     ccSave()
 end
-
 local function macro_JumpKeepSave()
     ccJump()
     task.wait(CC.keepToSave)
@@ -1726,7 +1599,6 @@ local function macro_JumpKeepSave()
     task.wait(CC.keepToSave)
     ccSave()
 end
-
 local CC_MACROS = { KeepSave = macro_KeepSave, JumpKeepSave = macro_JumpKeepSave }
 
 local CC_BTNS = {
@@ -1737,16 +1609,13 @@ local CC_DEFAULT_POS = {
     ccKS  = UDim2.new(0.62, 0, 0.66, 0),
     ccJKS = UDim2.new(0.76, 0, 0.66, 0),
 }
-
 local ccRoot = CoreGui
 pcall(function()
     local ok, hui = pcall(gethui)
     if ok and hui then ccRoot = hui end
 end)
-
 local ccOld = ccRoot:FindFirstChild("Fivelyss_MobileGK")
 if ccOld then ccOld:Destroy() end
-
 local ccGui = Instance.new("ScreenGui")
 ccGui.Name = "Fivelyss_MobileGK"
 ccGui.ResetOnSpawn = false
@@ -1754,10 +1623,8 @@ ccGui.DisplayOrder = 999997
 ccGui.IgnoreGuiInset = true
 ccGui.Enabled = CC.btn.visible
 ccGui.Parent = ccRoot
-
 local ccRefs = {}
 local ccBusy = false
-
 local function ccRunCombo(id)
     local fn = CC_MACROS[id]
     if not fn or ccBusy then return end
@@ -1767,11 +1634,9 @@ local function ccRunCombo(id)
         ccBusy = false
     end)
 end
-
 local function ccAddButton(def)
     local pos = CC.positions[def.id] or CC_DEFAULT_POS[def.id] or UDim2.new(0.5, 0, 0.5, 0)
     CC.positions[def.id] = pos
-
     local btn = Instance.new("TextButton")
     btn.Name = def.id
     btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
@@ -1788,19 +1653,15 @@ local function ccAddButton(def)
     btn.Visible = true
     btn.AutoButtonColor = false
     btn.Parent = ccGui
-
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = btn
-
     local stroke = Instance.new("UIStroke")
     stroke.Color = CC.btn.locked and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 200, 60)
     stroke.Thickness = 1.4
     stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
     stroke.Parent = btn
-
     local dragging, dragStart, startPos, fired = false, nil, nil, false
-
     btn.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
         and input.UserInputType ~= Enum.UserInputType.Touch then return end
@@ -1815,7 +1676,6 @@ local function ccAddButton(def)
         startPos = btn.Position
         fired = false
     end)
-
     btn.InputChanged:Connect(function(input)
         if not dragging then return end
         if input.UserInputType == Enum.UserInputType.MouseMovement
@@ -1826,7 +1686,6 @@ local function ccAddButton(def)
                 startPos.Y.Scale, startPos.Y.Offset + d.Y)
         end
     end)
-
     btn.InputEnded:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
         and input.UserInputType ~= Enum.UserInputType.Touch then return end
@@ -1840,12 +1699,9 @@ local function ccAddButton(def)
         end
         fired = false
     end)
-
     ccRefs[def.id] = { btn = btn, stroke = stroke }
 end
-
 for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
-
 local function ccSyncSizes()
     for _, r in pairs(ccRefs) do r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size) end
 end
@@ -1864,7 +1720,6 @@ end
 local function ccSyncVisible()
     ccGui.Enabled = CC.btn.visible
 end
-
 getgenv().TPSULT_CC = {
     Config = CC, Macros = CC_MACROS,
     Keep1 = ccKeep1, Save = ccSave, Jump = ccJump,
@@ -1873,34 +1728,14 @@ getgenv().TPSULT_CC = {
     SyncSizes = ccSyncSizes, SyncOpacity = ccSyncOpacity,
     SyncLock = ccSyncLock, SyncVisible = ccSyncVisible,
 }
-
-MobL:AddToggle("MobShowButtons", {
-    Text = "Show On-Screen Buttons", Default = true,
-    Callback = function(v) CC.btn.visible = v ccSyncVisible() Notify("Buttons " .. (v and "shown" or "hidden"), 2) end,
-})
-MobL:AddToggle("MobLockButtons", {
-    Text = "Lock Buttons (tap = run)", Default = false,
-    Callback = function(v) CC.btn.locked = v ccSyncLock() Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2) end,
-})
-MobL:AddToggle("MobEnableMacros", {
-    Text = "Enable Macros", Default = true,
-    Callback = function(v) CC.mobEnabled = v end,
-})
+MobL:AddToggle("MobShowButtons", { Text = "Show On-Screen Buttons", Default = true, Callback = function(v) CC.btn.visible = v ccSyncVisible() Notify("Buttons " .. (v and "shown" or "hidden"), 2) end })
+MobL:AddToggle("MobLockButtons", { Text = "Lock Buttons (tap = run)", Default = false, Callback = function(v) CC.btn.locked = v ccSyncLock() Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2) end })
+MobL:AddToggle("MobEnableMacros", { Text = "Enable Macros", Default = true, Callback = function(v) CC.mobEnabled = v end })
 MobL:AddButton({ Text = "Test Keep+Save", Func = function() ccRunCombo("KeepSave") Notify("Keep+Save fired", 2) end })
 MobL:AddButton({ Text = "Test Jump+Keep+Save", Func = function() ccRunCombo("JumpKeepSave") Notify("Jump+Keep+Save fired", 2) end })
-
-MobR:AddSlider("MobBtnSize", {
-    Text = "Button Size", Default = 88, Min = 40, Max = 180, Rounding = 0, Suffix = " px",
-    Callback = function(v) CC.btn.size = v ccSyncSizes() end,
-})
-MobR:AddSlider("MobBtnTrans", {
-    Text = "Button Visibility (Transparency)", Default = 0.12, Min = 0, Max = 1, Rounding = 2,
-    Callback = function(v) CC.btn.transparency = v ccSyncOpacity() end,
-})
-MobR:AddSlider("MobKeepGap", {
-    Text = "Keep → Save Gap", Default = 0.08, Min = 0, Max = 0.5, Rounding = 2, Suffix = "s",
-    Callback = function(v) CC.keepToSave = v end,
-})
+MobR:AddSlider("MobBtnSize", { Text = "Button Size", Default = 88, Min = 40, Max = 180, Rounding = 0, Suffix = " px", Callback = function(v) CC.btn.size = v ccSyncSizes() end })
+MobR:AddSlider("MobBtnTrans", { Text = "Button Visibility (Transparency)", Default = 0.12, Min = 0, Max = 1, Rounding = 2, Callback = function(v) CC.btn.transparency = v ccSyncOpacity() end })
+MobR:AddSlider("MobKeepGap", { Text = "Keep → Save Gap", Default = 0.08, Min = 0, Max = 0.5, Rounding = 2, Suffix = "s", Callback = function(v) CC.keepToSave = v end })
 MobR:AddButton({ Text = "Reset Button Positions", Func = function()
     for id, pos in pairs(CC_DEFAULT_POS) do
         CC.positions[id] = pos
@@ -1909,20 +1744,16 @@ MobR:AddButton({ Text = "Reset Button Positions", Func = function()
     Notify("Positions reset", 2)
 end })
 
--- ============================================================
---  FINAL
--- ============================================================
 Library:Notify("🌹 FIVELYSS v2.2 loaded", 4)
 task.wait(1.2)
-Library:Notify("Reach + Limb + Stamina + Mobile GK ready", 4)
+Library:Notify("Decimal reach sliders (0-10, step 0.1)", 4)
 task.wait(1.2)
 Library:Notify("RightShift to toggle UI", 4)
 
 print("============================================")
-print("  FIVELYSS v2.2 - MERGED EDITION")
-print("  - Reach (FTV1 / HitboxExt / Comp / Keybind)")
-print("  - Limb Reach + Visualizers + Vis Transparency")
-print("  - Infinite Stamina (VETA method)")
-print("  - Mobile GK on-screen buttons")
-print("    (Show / Lock / Transparency / Size)")
+print("  FIVELYSS v2.2 - MERGED + DECIMAL REACH")
+print("  Reach sliders: 0 to 10, step 0.1")
+print("  Limb Reach + Visualizers + Transparency")
+print("  Infinite Stamina (VETA)")
+print("  Mobile GK on-screen buttons")
 print("============================================")
