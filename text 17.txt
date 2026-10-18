@@ -1,295 +1,233 @@
---[[
-    ============================================================
-    FIVELYSS | TPS ULTIMATE SOCCER
-    v2.2.1 — MERGED EDITION (UI FIX)
-    Key: 1234 | UI: Obsidian | Toggle: RightShift
-    ============================================================
-]]
-local KeyCode = "1234"
-local MaxAttempts = 3
+-- lov
 
-local function ShowKeyPrompt()
-    local Players = game:GetService("Players")
-    local CoreGui = game:GetService("CoreGui")
-    local LocalPlayer = Players.LocalPlayer
-    local KeyGui = Instance.new("ScreenGui")
-    KeyGui.Name = "Fivelyss_Key"
-    KeyGui.ResetOnSpawn = false
-    KeyGui.IgnoreGuiInset = true
-    KeyGui.DisplayOrder = 9999999
-    KeyGui.Parent = CoreGui
-    local Bg = Instance.new("Frame")
-    Bg.Size = UDim2.new(1, 0, 1, 0)
-    Bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Bg.BackgroundTransparency = 0.3
-    Bg.BorderSizePixel = 0
-    Bg.Parent = KeyGui
-    local Main = Instance.new("Frame")
-    Main.Size = UDim2.new(0, 420, 0, 260)
-    Main.Position = UDim2.new(0.5, -210, 0.5, -130)
-    Main.BackgroundColor3 = Color3.fromRGB(20, 10, 10)
-    Main.BorderSizePixel = 0
-    Main.Parent = Bg
-    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
-    local Stroke = Instance.new("UIStroke", Main)
-    Stroke.Color = Color3.fromRGB(255, 30, 30)
-    Stroke.Thickness = 2
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 50)
-    Title.Position = UDim2.new(0, 0, 0, 15)
-    Title.BackgroundTransparency = 1
-    Title.Text = "FIVELYSS"
-    Title.TextColor3 = Color3.fromRGB(255, 30, 30)
-    Title.TextSize = 30
-    Title.Font = Enum.Font.Code
-    Title.Parent = Main
-    local Subtitle = Instance.new("TextLabel")
-    Subtitle.Size = UDim2.new(1, 0, 0, 25)
-    Subtitle.Position = UDim2.new(0, 0, 0, 60)
-    Subtitle.BackgroundTransparency = 1
-    Subtitle.Text = "TPS Utlimate Soccer | Enter Key"
-    Subtitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Subtitle.TextSize = 15
-    Subtitle.Font = Enum.Font.Code
-    Subtitle.Parent = Main
-    local InputFrame = Instance.new("Frame")
-    InputFrame.Size = UDim2.new(0, 340, 0, 45)
-    InputFrame.Position = UDim2.new(0.5, -170, 0, 110)
-    InputFrame.BackgroundColor3 = Color3.fromRGB(45, 15, 15)
-    InputFrame.BorderSizePixel = 0
-    InputFrame.Parent = Main
-    Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 8)
-    local TextBox = Instance.new("TextBox")
-    TextBox.Size = UDim2.new(1, -20, 1, 0)
-    TextBox.Position = UDim2.new(0, 10, 0, 0)
-    TextBox.BackgroundTransparency = 1
-    TextBox.Text = ""
-    TextBox.PlaceholderText = "Enter code..."
-    TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-    TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextBox.TextSize = 18
-    TextBox.Font = Enum.Font.Code
-    TextBox.ClearTextOnFocus = false
-    TextBox.Parent = InputFrame
-    local Status = Instance.new("TextLabel")
-    Status.Size = UDim2.new(1, 0, 0, 25)
-    Status.Position = UDim2.new(0, 0, 0, 165)
-    Status.BackgroundTransparency = 1
-    Status.Text = ""
-    Status.TextColor3 = Color3.fromRGB(255, 100, 100)
-    Status.TextSize = 14
-    Status.Font = Enum.Font.Code
-    Status.Parent = Main
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0, 340, 0, 45)
-    Button.Position = UDim2.new(0.5, -170, 0, 195)
-    Button.BackgroundColor3 = Color3.fromRGB(255, 30, 30)
-    Button.Text = "SUBMIT"
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 18
-    Button.Font = Enum.Font.Code
-    Button.BorderSizePixel = 0
-    Button.Parent = Main
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
-    local Result = { Success = false }
-    local attempts = 0
-    local function Validate()
-        if TextBox.Text == KeyCode then
-            Status.Text = "Correct key!"
-            Status.TextColor3 = Color3.fromRGB(100, 255, 100)
-            Result.Success = true
-            task.wait(0.5)
-            KeyGui:Destroy()
-        else
-            attempts = attempts + 1
-            if attempts >= MaxAttempts then
-                Status.Text = "Too many attempts"
-                task.wait(1)
-                KeyGui:Destroy()
-                LocalPlayer:Kick("Fivelyss | Incorrect key")
-            else
-                Status.Text = "Wrong key (" .. attempts .. "/" .. MaxAttempts .. ")"
-                TextBox.Text = ""
-                TextBox:CaptureFocus()
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local scriptsToDelete = {
+    "c-849z-431y",
+    "w-21g-108d",
+    "Script",
+    "f-750u765r",
+    "a-527t-63b"
+}
+
+local function deleteHiddenScripts()
+    local deletedCount = 0
+    for _, obj in pairs(game:GetDescendants()) do
+        if (obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript")) then
+            for _, name in pairs(scriptsToDelete) do
+                if obj.Name == name then
+                    pcall(function()
+                        obj:Destroy()
+                        deletedCount = deletedCount + 1
+                        print("Deleted: " .. obj.Name .. " from " .. tostring(obj.Parent))
+                    end)
+                end
             end
         end
     end
-    Button.MouseButton1Click:Connect(Validate)
-    TextBox.FocusLost:Connect(function(enter) if enter then Validate() end end)
-    task.wait(0.3)
-    TextBox:CaptureFocus()
-    while not Result.Success and KeyGui.Parent do task.wait(0.1) end
-    return Result.Success
+    if getnilinstances then
+        for _, obj in pairs(getnilinstances()) do
+            if obj:IsA("LuaSourceContainer") then
+                for _, name in pairs(scriptsToDelete) do
+                    if obj.Name == name then
+                        pcall(function()
+                            obj:Destroy()
+                            deletedCount = deletedCount + 1
+                            print("Deleted nil script: " .. obj.Name)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+    return deletedCount
 end
 
-if not ShowKeyPrompt() then return end
+local oldAC
+oldAC = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if (method == "FireServer" or method == "InvokeServer") then
+        local remoteName = tostring(self)
+        if remoteName:find("RemoteEventL") or remoteName:find("Anticheat") or
+           remoteName:find("Banned") or remoteName:find("Ban") or remoteName:find("Kick") then
+            return
+        end
+    end
+    return oldAC(self, ...)
+end)
 
-local Http = game:GetService("HttpService")
-local Webhook = "https://discord.com/api/webhooks/1551327976204013588/7O5JjBLyPnbWT9-UIOeA4mf5Ik9Jcn-2xUPPyzEAzt0_A1XUgHs9kqoAHjJS5_FogAcH"
-local player = game.Players.LocalPlayer
-local executor = "Unknown"
-pcall(function() executor = identifyexecutor() or "Unknown" end)
-local hardwareId = "N/A"
-pcall(function() hardwareId = game:GetService("RbxAnalyticsService"):GetClientId() end)
-local gameName = "N/A"
-pcall(function() gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
-pcall(function()
-    local body = Http:JSONEncode({
-        content = "",
-        embeds = {{
-            title = "**Fivelyss v2.2.1 Executed**",
-            description = "**" .. player.Name .. "** ran the script.",
-            color = 15105570,
-            fields = {
-                { name = "Player", value = player.Name, inline = true },
-                { name = "Game", value = gameName, inline = true },
-                { name = "PlaceId", value = tostring(game.PlaceId), inline = true },
-                { name = "Executor", value = executor, inline = true },
-                { name = "HWID", value = hardwareId, inline = false }
-            }
-        }}
-    })
-    local req = (syn and syn.request) or request or http_request
-    if req then
-        req({Url = Webhook, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
+local blockedBoolValues = {
+    "BannedPlayer",
+    "Ban"
+}
+
+for _, obj in pairs(game:GetDescendants()) do
+    if obj:IsA("BoolValue") then
+        for _, blocked in pairs(blockedBoolValues) do
+            if obj.Name:find(blocked) then
+                warn("Destroyed BoolValue:", obj.Name)
+                obj:Destroy()
+                break
+            end
+        end
+    end
+end
+
+game.DescendantAdded:Connect(function(obj)
+    if obj:IsA("BoolValue") then
+        for _, blocked in pairs(blockedBoolValues) do
+            if obj.Name:find(blocked) then
+                warn("Destroyed new BoolValue:", obj.Name)
+                obj:Destroy()
+                break
+            end
+        end
     end
 end)
 
-local Players            = game:GetService("Players")
-local RunService         = game:GetService("RunService")
-local UserInputService   = game:GetService("UserInputService")
-local Lighting           = game:GetService("Lighting")
-local Workspace          = game:GetService("Workspace")
-local TeleportService    = game:GetService("TeleportService")
-local CoreGui            = game:GetService("CoreGui")
-local StarterGui         = game:GetService("StarterGui")
-local Stats              = game:GetService("Stats")
-local Debris             = game:GetService("Debris")
-local VirtualUser        = game:GetService("VirtualUser")
-local HttpService        = game:GetService("HttpService")
-local LogService         = game:GetService("LogService")
-local LocalPlayer        = Players.LocalPlayer
+local blockedKeywords = {
+    "exploit",
+    "Banned",
+    "Ban",
+    "Anti",
+    "Detect",
+    "Flag"
+}
 
-local BASE_WALKSPEED = 22
-local SPRINT_WALKSPEED = 16
+local function checkAndDestroy(script)
+    if script:IsA("LocalScript") or script:IsA("Script") then
+        local scriptName = script.Name
+        local scriptNameLower = scriptName:lower()
 
+        if scriptName == "" or scriptName:match("^%s*$") then
+            warn("Destroying script with empty/whitespace name:", script:GetFullName())
+            pcall(function()
+                script.Disabled = true
+                script:Destroy()
+            end)
+            return true
+        end
+
+        for _, keyword in pairs(blockedKeywords) do
+            if scriptNameLower:find(keyword:lower()) then
+                warn("Destroying blocked script:", scriptName, "Path:", script:GetFullName())
+                pcall(function()
+                    script.Disabled = true
+                    script:Destroy()
+                end)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+for _, descendant in pairs(workspace:GetDescendants()) do
+    checkAndDestroy(descendant)
+end
+
+local player = game.Players.LocalPlayer
+for _, descendant in pairs(player:GetDescendants()) do
+    checkAndDestroy(descendant)
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+    task.wait()
+    checkAndDestroy(descendant)
+end)
+
+player.DescendantAdded:Connect(function(descendant)
+    task.wait()
+    checkAndDestroy(descendant)
+end)
+
+local character = player.Character or player.CharacterAdded:Wait()
+for _, descendant in pairs(character:GetDescendants()) do
+    checkAndDestroy(descendant)
+end
+
+character.DescendantAdded:Connect(function(descendant)
+    task.wait()
+    checkAndDestroy(descendant)
+end)
+
+player.CharacterAdded:Connect(function(newCharacter)
+    task.wait(1)
+    for _, descendant in pairs(newCharacter:GetDescendants()) do
+        checkAndDestroy(descendant)
+    end
+
+    newCharacter.DescendantAdded:Connect(function(descendant)
+        task.wait()
+        checkAndDestroy(descendant)
+    end)
+end)
+
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "TPS ULTIMATE SOCCER X VETA",
+    Icon = "rbxassetid://106211849494703",
+    Author = "Made By VETA - Optimized",
+    Folder = "TPSBitch",
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+            print("Stop Clicking boi")
+        end,
+    },
+})
+
+Window:Tag({
+    Title = "MOBILE SUPPORTED",
+    Icon = "smartphone",
+    Color = Color3.fromHex("#30ff6a"),
+    Radius = 0,
+})
+
+Window:Tag({
+    Title = "XENO|SOLARA UNSUPPORTED",
+    Icon = "laptop",
+    Color = Color3.fromHex("#FF0000"),
+    Radius = 0,
+})
+
+-- ============================================================
+-- REACH — FTV1 / HitboxExt / Comp / Keybind
+-- ============================================================
+local HitboxTab = Window:Tab({ Title = "Reach", Icon = "box" })
+
+local FTV1 = { Distance = 2.5, Conn = nil }
+local function FTV1_Hook(limb, ball)
+    pcall(function()
+        firetouchinterest(limb, ball, 0)
+        firetouchinterest(limb, ball, 1)
+    end)
+end
+
+local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head", "Torso"}
+local TrackedBalls = {}
 local BALL_NAMES = {
     "TPS", "MPS", "MPSBall", "StreetBall",
     "PSoccerBall", "SoccerBall", "Ball", "Football",
     "MatchBall", "fakeBaIlExpIoiter", "fakeBall", "ballPart",
     "CSF", "VEF", "IFF", "Futbol", "Pelota"
 }
-local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head", "Torso"}
 local BALL_SET = {}
 for _, n in ipairs(BALL_NAMES) do BALL_SET[n] = true end
 
-local State = { SavedPos = nil }
-local Cache = {
-    Character = nil, Humanoid = nil, Root = nil,
-    MainBall = nil, LastBallScan = 0,
-    BallList = {}, LastBallListScan = 0,
-}
-local AntiBan = { Enabled = true }
-local R_HELD = false
-local TrackedBalls = {}
-local ForceLocalScore = { Green = 0, Blue = 0, Enabled = false }
-
-pcall(function()
-    local mt = getrawmetatable(game)
-    if not mt then return end
-    setreadonly(mt, false)
-    local oldNC = mt.__namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        if not AntiBan.Enabled then return oldNC(self, ...) end
-        local method = getnamecallmethod()
-        if method == "Kick" and self == LocalPlayer then return nil end
-        if method == "FireServer" or method == "InvokeServer" then
-            local ok, name = pcall(function() return self.Name end)
-            if ok and type(name) == "string" then
-                local n = name:lower()
-                if n:find("anticheat") or n:find("detect") or n:find("ban")
-                   or n:find("flag") or n:find("report") or n:find("vote")
-                   or n:find("kick") then
-                    return nil
-                end
-            end
-        end
-        return oldNC(self, ...)
-    end)
-    setreadonly(mt, true)
-end)
-
-pcall(function()
-    local Destroyed = setmetatable({}, {__mode = "k"})
-    local Keywords = {"Banned", "Walkspeed", "Ban", "AntiCheat"}
-    local function ContainsBad(text)
-        for _, k in ipairs(Keywords) do
-            if text:find(k, 1, true) then return true end
-        end
-        return false
-    end
-    local function IsAntiCheat(scr)
-        if typeof(scr) ~= "Instance" or not scr:IsA("LuaSourceContainer") then return false end
-        local ok, src = pcall(function() return scr.Source end)
-        return ok and typeof(src) == "string" and ContainsBad(src)
-    end
-    for _, d in ipairs(game:GetDescendants()) do
-        if (d:IsA("LocalScript") or d:IsA("ModuleScript") or
-            (d:IsA("Script") and d.RunContext == Enum.RunContext.Client)) and
-            not Destroyed[d] and IsAntiCheat(d) then
-            pcall(function() d:Destroy() end)
-            Destroyed[d] = true
-        end
-    end
-    game.DescendantAdded:Connect(function(d)
-        if (d:IsA("LocalScript") or d:IsA("ModuleScript") or d:IsA("Script")) and IsAntiCheat(d) then
-            pcall(function() d:Destroy() end)
-            Destroyed[d] = true
-        end
-    end)
-end)
-
-local function GetCharacter() return Cache.Character or LocalPlayer.Character end
-local function GetHumanoid()
-    if Cache.Humanoid and Cache.Humanoid.Parent then return Cache.Humanoid end
-    local c = GetCharacter()
-    if c then Cache.Humanoid = c:FindFirstChildOfClass("Humanoid") end
-    return Cache.Humanoid
-end
-local function GetRoot()
-    if Cache.Root and Cache.Root.Parent then return Cache.Root end
-    local c = GetCharacter()
-    if c then Cache.Root = c:FindFirstChild("HumanoidRootPart") end
-    return Cache.Root
-end
-local function GetFE() return Workspace:FindFirstChild("FE") end
-local function ResetVelocity()
-    local root = GetRoot()
-    if root then
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-    end
-end
-local function IsBall(inst)
-    return inst and inst:IsA("BasePart") and BALL_SET[inst.Name] == true
-end
-
 local function FindAllBalls()
     TrackedBalls = {}
-    local tps = Workspace:FindFirstChild("TPSSystem")
+    local tps = workspace:FindFirstChild("TPSSystem")
     if tps then
         local tpsBall = tps:FindFirstChild("TPS")
         if tpsBall and tpsBall:IsA("BasePart") then table.insert(TrackedBalls, tpsBall) end
     end
-    local mps = Workspace:FindFirstChild("MPSSystem") or Workspace:FindFirstChild("MPS")
-    if mps then
-        for _, child in ipairs(mps:GetChildren()) do
-            if child:IsA("BasePart") and (child.Name == "MPSBall" or child.Name == "Ball" or child.Name == "MPS") then
-                table.insert(TrackedBalls, child)
-            end
-        end
-    end
-    local practice = Workspace:FindFirstChild("Practice")
+    local practice = workspace:FindFirstChild("Practice")
     if practice then
         for _, child in ipairs(practice:GetChildren()) do
             if child:IsA("BasePart") and (child.Name == "PSoccerBall" or child.Name == "Ball") then
@@ -298,7 +236,7 @@ local function FindAllBalls()
         end
     end
     for _, n in ipairs(BALL_NAMES) do
-        local b = Workspace:FindFirstChild(n)
+        local b = workspace:FindFirstChild(n)
         if b and b:IsA("BasePart") and not table.find(TrackedBalls, b) then
             table.insert(TrackedBalls, b)
         end
@@ -306,28 +244,21 @@ local function FindAllBalls()
 end
 
 local function GetMainBall()
-    local now = os.clock()
-    if Cache.MainBall and Cache.MainBall.Parent and (now - Cache.LastBallScan) < 0.5 then
-        return Cache.MainBall
-    end
-    local tps = Workspace:FindFirstChild("TPSSystem")
+    local tps = workspace:FindFirstChild("TPSSystem")
     if tps then
         local b = tps:FindFirstChild("TPS")
-        if b then Cache.MainBall = b Cache.LastBallScan = now return b end
+        if b then return b end
     end
     for _, name in ipairs(BALL_NAMES) do
-        local ball = Workspace:FindFirstChild(name)
-        if ball and ball:IsA("BasePart") then
-            Cache.MainBall = ball Cache.LastBallScan = now return ball
-        end
+        local ball = workspace:FindFirstChild(name)
+        if ball and ball:IsA("BasePart") then return ball end
     end
-    Cache.MainBall = nil
     return nil
 end
 
 local function GetPracticeBalls()
     local list = {}
-    local practice = Workspace:FindFirstChild("Practice")
+    local practice = workspace:FindFirstChild("Practice")
     if practice then
         for _, child in ipairs(practice:GetChildren()) do
             if child:IsA("BasePart") and (child.Name == "PSoccerBall" or child.Name == "Ball") then
@@ -338,195 +269,25 @@ local function GetPracticeBalls()
     return list
 end
 
-local function GetBallList()
-    local now = os.clock()
-    if (now - Cache.LastBallListScan) < 0.5 and #Cache.BallList > 0 then
-        local valid = true
-        for _, b in ipairs(Cache.BallList) do
-            if not b.Parent then valid = false break end
-        end
-        if valid then return Cache.BallList end
-    end
-    local balls, seen = {}, {}
-    local tps = Workspace:FindFirstChild("TPSSystem")
-    if tps then
-        local tpsBall = tps:FindFirstChild("TPS")
-        if tpsBall and tpsBall:IsA("BasePart") then
-            table.insert(balls, tpsBall) seen[tpsBall] = true
-        end
-    end
-    local practice = Workspace:FindFirstChild("Practice")
-    if practice then
-        for _, child in ipairs(practice:GetChildren()) do
-            if child:IsA("BasePart") and (child.Name == "PSoccerBall" or child.Name == "Ball") then
-                if not seen[child] then table.insert(balls, child) seen[child] = true end
-            end
-        end
-    end
-    for _, n in ipairs(BALL_NAMES) do
-        local b = Workspace:FindFirstChild(n)
-        if b and b:IsA("BasePart") and not seen[b] then
-            table.insert(balls, b) seen[b] = true
-        end
-    end
-    Cache.BallList = balls
-    Cache.LastBallListScan = now
-    return balls
-end
-
-LocalPlayer.CharacterAdded:Connect(function(c)
-    Cache.Character = c
-    Cache.Humanoid = c:WaitForChild("Humanoid", 5)
-    Cache.Root = c:WaitForChild("HumanoidRootPart", 5)
-end)
-LocalPlayer.CharacterRemoving:Connect(function()
-    Cache.Character = nil; Cache.Humanoid = nil; Cache.Root = nil
-end)
-if LocalPlayer.Character then
-    Cache.Character = LocalPlayer.Character
-    Cache.Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    Cache.Root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-end
-
-Workspace.DescendantAdded:Connect(function(c)
-    if IsBall(c) and not table.find(TrackedBalls, c) then
+FindAllBalls()
+workspace.DescendantAdded:Connect(function(c)
+    if c:IsA("BasePart") and BALL_SET[c.Name] and not table.find(TrackedBalls, c) then
         table.insert(TrackedBalls, c)
     end
 end)
-FindAllBalls()
 
-task.spawn(function()
-    task.wait(1)
-    local hum = GetHumanoid()
-    if hum then hum.WalkSpeed = BASE_WALKSPEED end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if not Cache.Humanoid then return end
-    local target = R_HELD and SPRINT_WALKSPEED or BASE_WALKSPEED
-    if Cache.Humanoid.WalkSpeed ~= target then Cache.Humanoid.WalkSpeed = target end
-end)
-
-UserInputService.InputBegan:Connect(function(Input, Processed)
-    if Processed then return end
-    if Input.KeyCode == Enum.KeyCode.R then
-        R_HELD = true
-        if UserInputService:IsKeyDown(Enum.KeyCode.X) then
-            task.spawn(function()
-                local root = GetRoot() local ball = GetMainBall()
-                if root and ball then
-                    local dir = (ball.Position - root.Position).Unit
-                    root.AssemblyLinearVelocity = Vector3.new(dir.X * 80, root.AssemblyLinearVelocity.Y, dir.Z * 80)
-                end
-            end)
-        end
-    end
-    if Input.KeyCode == Enum.KeyCode.F and UserInputService:IsKeyDown(Enum.KeyCode.X) then
-        task.spawn(function()
-            local root = GetRoot() local ball = GetMainBall()
-            if root and ball then ball.AssemblyLinearVelocity = (root.Position - ball.Position).Unit * 100 end
-        end)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(Input, Processed)
-    if Processed then return end
-    if Input.KeyCode == Enum.KeyCode.R then R_HELD = false end
-end)
-
-local Library
-do
-    local ok, res = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
-    end)
-    if ok and res then
-        Library = res
-    else
-        ok, res = pcall(function()
-            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
-        end)
-        if ok and res then Library = res
-        else error("[Fivelyss] UI library could not load.") end
-    end
-end
-
-Library.Scheme.Font             = Font.fromEnum(Enum.Font.Code)
-Library.Scheme.BackgroundColor  = Color3.fromRGB(10, 5, 10)
-Library.Scheme.MainColor        = Color3.fromRGB(25, 12, 20)
-Library.Scheme.AccentColor      = Color3.fromRGB(255, 105, 180)
-Library.Scheme.OutlineColor     = Color3.fromRGB(80, 30, 55)
-Library.Scheme.FontColor        = Color3.fromRGB(255, 220, 235)
-Library.Scheme.RedColor         = Color3.fromRGB(255, 80, 120)
-Library.Scheme.DarkColor        = Color3.fromRGB(5, 2, 5)
-Library.Scheme.WhiteColor       = Color3.fromRGB(255, 240, 245)
-Library.CornerRadius = 12
-
-local Window = Library:CreateWindow({
-    Title = "🌹 FIREHUB",
-    Icon = "flame",
-    IconSize = UDim2.fromOffset(28, 28),
-    Footer = "TPS & MPS Street Soccer | v2.2.1",
-    Center = true,
-    AutoShow = true,
-    ToggleKeybind = Enum.KeyCode.RightShift,
-    Size = UDim2.fromOffset(900, 660),
-    Font = Enum.Font.Code,
-    Resizable = true,
-    Glow = true,
-    CornerRadius = 8,
-})
-
-pcall(function() Library:SetGradientAnimation(true) end)
-
-UserInputService.InputBegan:Connect(function(Input, Processed)
-    if Processed then return end
-    if Input.KeyCode == Enum.KeyCode.RightShift then Library:Toggle() end
-end)
-
-local function Notify(text, duration)
-    pcall(function() Library:Notify(tostring(text), tonumber(duration) or 3) end)
-end
-
-local StatusTab = Window:AddTab("Status", "activity")
-local StatusL = StatusTab:AddLeftGroupbox("Script Status")
-local StatusR = StatusTab:AddRightGroupbox("Session Information")
-
-StatusL:AddLabel("Fivelyss v2.2.1 — UI FIX")
-StatusL:AddLabel("- Sky tab icon fixed")
-StatusL:AddLabel("- Mobile GK buttons re-enable post-build")
-StatusL:AddLabel("- DisplayOrder maxed")
-
-StatusR:AddLabel("Username: " .. LocalPlayer.Name)
-StatusR:AddLabel("Place ID: " .. tostring(game.PlaceId))
-StatusR:AddLabel("Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
-
-local ReachTab = Window:AddTab("Reach", "crosshair")
-local ReachL = ReachTab:AddLeftGroupbox("FireTouch V1")
-local ReachR = ReachTab:AddRightGroupbox("Hitbox Extender")
-local ReachCompL = ReachTab:AddRightGroupbox("Comp Reach")
-local ReachKeyL = ReachTab:AddRightGroupbox("Keybind Reach")
-
-local FTV1 = { Distance = 2.5, Conn = nil }
-local function FTV1_Hook(limb, ball)
-    pcall(function()
-        firetouchinterest(limb, ball, 0)
-        firetouchinterest(limb, ball, 1)
-    end)
-end
 local function FTV1_Enable()
     if FTV1.Conn then FTV1.Conn:Disconnect() end
     FTV1.Conn = RunService.Heartbeat:Connect(function()
-        local char = Cache.Character
-        local hrp = Cache.Root
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not char or not hrp then return end
         local hrpPos = hrp.Position
         for _, ball in ipairs(TrackedBalls) do
-            if ball and ball.Parent then
-                if (hrpPos - ball.Position).Magnitude <= FTV1.Distance then
-                    for _, name in ipairs(ALL_LIMBS) do
-                        local limb = char:FindFirstChild(name)
-                        if limb then FTV1_Hook(limb, ball) end
-                    end
+            if ball and ball.Parent and (hrpPos - ball.Position).Magnitude <= FTV1.Distance then
+                for _, name in ipairs(ALL_LIMBS) do
+                    local limb = char:FindFirstChild(name)
+                    if limb then FTV1_Hook(limb, ball) end
                 end
             end
         end
@@ -534,36 +295,39 @@ local function FTV1_Enable()
 end
 FTV1_Enable()
 
-ReachL:AddSlider("FTV1Dist", { Text = "Reach Distance", Default = 2.5, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Suffix = " studs", Callback = function(v) FTV1.Distance = v end })
-ReachL:AddButton({ Text = "Refresh Balls", Func = function() FindAllBalls() Notify("Found " .. #TrackedBalls .. " balls", 2) end })
-ReachL:AddButton({ Text = "Re-enable FTV1", Func = function() FTV1_Enable() Notify("FTV1 refreshed", 2) end })
+HitboxTab:Section({ Title = "FireTouch V1" }):Slider({
+    Title = "Reach Distance",
+    Step = 0.1,
+    Value = { Min = 0, Max = 10, Default = 2.5 },
+    Callback = function(v) FTV1.Distance = v end,
+})
+local sFTV1 = HitboxTab:Section({ Title = "FireTouch V1" })
+sFTV1:Button({ Title = "Refresh Balls", Justify = "Center", Callback = function() FindAllBalls() WindUI:Notify({Title="Refresh",Content="Found ".. #TrackedBalls .." balls"}) end })
+sFTV1:Button({ Title = "Re-enable FTV1", Justify = "Center", Callback = function() FTV1_Enable() WindUI:Notify({Title="FTV1",Content="Refreshed"}) end })
 
 local HitboxExt = {
     LeftArmSize = 1, RightArmSize = 1, LeftLegSize = 1, RightLegSize = 1,
     Fixer = 1, Enabled = false, Conn = nil, MaxSize = 2,
 }
-ReachR:AddSlider("LeftArmSize", { Text = "Left Arm Size", Default = 1, Min = 1, Max = 2, Rounding = 0, Callback = function(v) HitboxExt.LeftArmSize = math.min(v, HitboxExt.MaxSize) end })
-ReachR:AddSlider("RightArmSize", { Text = "Right Arm Size", Default = 1, Min = 1, Max = 2, Rounding = 0, Callback = function(v) HitboxExt.RightArmSize = math.min(v, HitboxExt.MaxSize) end })
-ReachR:AddSlider("LeftLegSize", { Text = "Left Leg Size", Default = 1, Min = 1, Max = 2, Rounding = 0, Callback = function(v) HitboxExt.LeftLegSize = math.min(v, HitboxExt.MaxSize) end })
-ReachR:AddSlider("RightLegSize", { Text = "Right Leg Size", Default = 1, Min = 1, Max = 2, Rounding = 0, Callback = function(v) HitboxExt.RightLegSize = math.min(v, HitboxExt.MaxSize) end })
-ReachR:AddSlider("HitboxFixer", { Text = "Fixer (multiplier)", Default = 1, Min = 1, Max = 2, Rounding = 1, Callback = function(v) HitboxExt.Fixer = v end })
-
-ReachR:AddToggle("HitboxExtToggle", {
-    Text = "Enable Hitbox Extender",
-    Default = false,
+local sHitbox = HitboxTab:Section({ Title = "Hitbox Extender" })
+sHitbox:Slider({ Title = "Left Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.LeftArmSize = math.min(v, HitboxExt.MaxSize) end })
+sHitbox:Slider({ Title = "Right Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.RightArmSize = math.min(v, HitboxExt.MaxSize) end })
+sHitbox:Slider({ Title = "Left Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.LeftLegSize = math.min(v, HitboxExt.MaxSize) end })
+sHitbox:Slider({ Title = "Right Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.RightLegSize = math.min(v, HitboxExt.MaxSize) end })
+sHitbox:Slider({ Title = "Fixer", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.Fixer = v end })
+sHitbox:Toggle({
+    Title = "Enable Hitbox Extender", Default = false,
     Callback = function(v)
         HitboxExt.Enabled = v
         if v then
             if HitboxExt.Conn then HitboxExt.Conn:Disconnect() end
             HitboxExt.Conn = RunService.Heartbeat:Connect(function()
                 if not HitboxExt.Enabled then return end
-                local char = GetCharacter()
+                local char = player.Character
                 if not char then return end
                 local function setLimb(name, size)
                     local p = char:FindFirstChild(name)
-                    if p and p:IsA("BasePart") then
-                        p.Size = Vector3.new(size, size, size) * HitboxExt.Fixer
-                    end
+                    if p and p:IsA("BasePart") then p.Size = Vector3.new(size, size, size) * HitboxExt.Fixer end
                 end
                 setLimb("Left Arm", HitboxExt.LeftArmSize)
                 setLimb("Right Arm", HitboxExt.RightArmSize)
@@ -572,11 +336,11 @@ ReachR:AddToggle("HitboxExtToggle", {
             end)
         else
             if HitboxExt.Conn then HitboxExt.Conn:Disconnect() HitboxExt.Conn = nil end
-            local char = GetCharacter()
+            local char = player.Character
             if char then
                 for _, name in ipairs({"Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
                     local p = char:FindFirstChild(name)
-                    if p then p.Size = Vector3.new(1, 2, 1) p.Transparency = 0 end
+                    if p then p.Size = Vector3.new(1, 2, 1) end
                 end
             end
         end
@@ -588,21 +352,21 @@ local CompReachCfg = {
     FTHead = false, FTChest = false, FTLegs = false, FTArms = false,
     Distance = 4,
 }
-ReachCompL:AddToggle("CRRightLeg", { Text = "Right Leg Reach", Default = false, Callback = function(v) CompReachCfg.RightLeg = v end })
-ReachCompL:AddToggle("CRLeftLeg", { Text = "Left Leg Reach", Default = false, Callback = function(v) CompReachCfg.LeftLeg = v end })
-ReachCompL:AddToggle("CRHead", { Text = "Head Reach", Default = false, Callback = function(v) CompReachCfg.Head = v end })
-ReachCompL:AddToggle("CRChest", { Text = "Chest Reach", Default = false, Callback = function(v) CompReachCfg.Chest = v end })
-ReachCompL:AddToggle("CRArm", { Text = "Arms Reach", Default = false, Callback = function(v) CompReachCfg.Arms = v end })
-ReachCompL:AddDivider()
-ReachCompL:AddToggle("CRFTHead", { Text = "FireTouch Head", Default = false, Callback = function(v) CompReachCfg.FTHead = v end })
-ReachCompL:AddToggle("CRFTChest", { Text = "FireTouch Chest", Default = false, Callback = function(v) CompReachCfg.FTChest = v end })
-ReachCompL:AddToggle("CRFTLegs", { Text = "FireTouch Legs", Default = false, Callback = function(v) CompReachCfg.FTLegs = v end })
-ReachCompL:AddToggle("CRFTArms", { Text = "FireTouch Arms", Default = false, Callback = function(v) CompReachCfg.FTArms = v end })
-ReachCompL:AddSlider("CRDist", { Text = "Comp Reach Distance", Default = 4, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) CompReachCfg.Distance = v end })
+local sComp = HitboxTab:Section({ Title = "Comp Reach" })
+sComp:Toggle({ Title = "Right Leg Reach", Default = false, Callback = function(v) CompReachCfg.RightLeg = v end })
+sComp:Toggle({ Title = "Left Leg Reach", Default = false, Callback = function(v) CompReachCfg.LeftLeg = v end })
+sComp:Toggle({ Title = "Head Reach", Default = false, Callback = function(v) CompReachCfg.Head = v end })
+sComp:Toggle({ Title = "Chest Reach", Default = false, Callback = function(v) CompReachCfg.Chest = v end })
+sComp:Toggle({ Title = "Arms Reach", Default = false, Callback = function(v) CompReachCfg.Arms = v end })
+sComp:Toggle({ Title = "FireTouch Head", Default = false, Callback = function(v) CompReachCfg.FTHead = v end })
+sComp:Toggle({ Title = "FireTouch Chest", Default = false, Callback = function(v) CompReachCfg.FTChest = v end })
+sComp:Toggle({ Title = "FireTouch Legs", Default = false, Callback = function(v) CompReachCfg.FTLegs = v end })
+sComp:Toggle({ Title = "FireTouch Arms", Default = false, Callback = function(v) CompReachCfg.FTArms = v end })
+sComp:Slider({ Title = "Comp Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 4 }, Callback = function(v) CompReachCfg.Distance = v end })
 
 RunService.Heartbeat:Connect(function()
-    local char = Cache.Character
-    local root = Cache.Root
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
     if not char or not root then return end
     local ball = GetMainBall()
     if not ball then return end
@@ -628,19 +392,20 @@ local KeybindReach = {
         FakeShoot = Enum.KeyCode.Z,
     }
 }
-ReachKeyL:AddToggle("KeybindReachToggle", { Text = "Enable Keybind Reach", Default = false, Callback = function(v) KeybindReach.Enabled = v end })
-ReachKeyL:AddSlider("KeybindReachDist", { Text = "Distance", Default = 6, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) KeybindReach.Distance = v end })
+local sKeybind = HitboxTab:Section({ Title = "Keybind Reach" })
+sKeybind:Toggle({ Title = "Enable Keybind Reach", Default = false, Callback = function(v) KeybindReach.Enabled = v end })
+sKeybind:Slider({ Title = "Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 6 }, Callback = function(v) KeybindReach.Distance = v end })
 
 RunService.Heartbeat:Connect(function()
     if not KeybindReach.Enabled then return end
-    local char = Cache.Character
-    local root = Cache.Root
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
     if not char or not root then return end
     local ball = GetMainBall()
     if not ball then return end
     if (root.Position - ball.Position).Magnitude > KeybindReach.Distance then return end
     for _, key in pairs(KeybindReach.Keybinds) do
-        if UserInputService:IsKeyDown(key) then
+        if game:GetService("UserInputService"):IsKeyDown(key) then
             for _, name in ipairs(ALL_LIMBS) do
                 local limb = char:FindFirstChild(name)
                 if limb then pcall(FTV1_Hook, limb, ball) end
@@ -650,9 +415,10 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local LimbTab = Window:AddTab("Limb Reach", "box")
-local LimbReachL = LimbTab:AddLeftGroupbox("Limb Hitbox Reach")
-local LimbReachR = LimbTab:AddRightGroupbox("Limb Visualizers")
+-- ============================================================
+-- LIMB REACH with visualizers + transparency + sliders 0-10 step 0.1
+-- ============================================================
+local LimbTab = Window:Tab({ Title = "Limb Reach", Icon = "crosshair" })
 
 local reachSettings = {
     HeadEnabled = false, HeadVisualizer = false, HeadVisTransparency = 0.7,
@@ -665,12 +431,11 @@ local reachSettings = {
     ReachX_Leg = 1, ReachY_Leg = 1, ReachZ_Leg = 1,
     ReachDistance = 50,
 }
-
-local LimbBodyParts = {"Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 local LimbHitboxes = {}
 local LimbVisualizers = {}
 local LimbActiveTouches = {}
 local LIMB_TOUCH_COOLDOWN = 0.1
+local LimbBodyParts = {"Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 
 local function SafeClear(tbl)
     if not tbl then return end
@@ -738,7 +503,7 @@ local function GetVisTransparencyFor(partName)
 end
 
 local function UpdateLimbVisualizer(partName)
-    local char = Cache.Character or LocalPlayer.Character
+    local char = player.Character
     if not char then return end
     local bodyPart = char:FindFirstChild(partName)
     if not bodyPart then return end
@@ -758,49 +523,43 @@ local function UpdateLimbVisualizer(partName)
     if LimbVisualizers[partName] then LimbVisualizers[partName]:Destroy() LimbVisualizers[partName] = nil end
     if visOn and LimbHitboxes[partName] then
         local hitbox = LimbHitboxes[partName]
-        local visualizer = Instance.new("Part")
-        visualizer.Name = partName .. "_Visualizer"
-        visualizer.Size = hitbox.Size
-        visualizer.CFrame = hitbox.CFrame
-        visualizer.Anchored = false
-        visualizer.CanCollide = false
-        visualizer.Transparency = GetVisTransparencyFor(partName)
-        visualizer.Color = Color3.fromRGB(255, 105, 180)
-        visualizer.Material = Enum.Material.Neon
-        visualizer.Massless = true
-        visualizer.Parent = hitbox
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = hitbox
-        weld.Part1 = visualizer
-        weld.Parent = visualizer
-        LimbVisualizers[partName] = visualizer
+        local vis = Instance.new("Part")
+        vis.Name = partName .. "_Visualizer"
+        vis.Size = hitbox.Size
+        vis.CFrame = hitbox.CFrame
+        vis.Anchored = false
+        vis.CanCollide = false
+        vis.Transparency = GetVisTransparencyFor(partName)
+        vis.Color = Color3.fromRGB(0, 255, 100)
+        vis.Material = Enum.Material.Neon
+        vis.Massless = true
+        vis.Parent = hitbox
+        local w = Instance.new("WeldConstraint")
+        w.Part0 = hitbox
+        w.Part1 = vis
+        w.Parent = vis
+        LimbVisualizers[partName] = vis
     end
 end
 
 local function RefreshVisTransparency()
-    for partName, visualizer in pairs(LimbVisualizers) do
-        if visualizer and visualizer.Parent then
-            visualizer.Transparency = GetVisTransparencyFor(partName)
-        end
+    for partName, v in pairs(LimbVisualizers) do
+        if v and v.Parent then v.Transparency = GetVisTransparencyFor(partName) end
     end
 end
 
 local function FindBallPartLimb(part)
-    if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall" or BALL_SET[part.Name]) then
-        return part
-    end
+    if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall" or BALL_SET[part.Name]) then return part end
     local current = part
     while current and current ~= Workspace do
-        if current:IsA("BasePart") and (current.Name == "PSoccerBall" or current.Name == "TPS" or BALL_SET[current.Name]) then
-            return current
-        end
+        if current:IsA("BasePart") and (current.Name == "PSoccerBall" or current.Name == "TPS" or BALL_SET[current.Name]) then return current end
         current = current.Parent
     end
     return nil
 end
 
 local function CreateAllLimbHitboxes()
-    local char = Cache.Character or LocalPlayer.Character
+    local char = player.Character
     if not char then return end
     for _, partName in ipairs(LimbBodyParts) do
         local bodyPart = char:FindFirstChild(partName)
@@ -821,7 +580,7 @@ local function RemoveAllLimbHitboxes()
 end
 
 local function CheckLimbBallCollisions()
-    local char = Cache.Character or LocalPlayer.Character
+    local char = player.Character
     if not char or not char.Parent then return end
     local currentTime = tick()
     local newTouches = {}
@@ -829,17 +588,17 @@ local function CheckLimbBallCollisions()
         if hitbox and hitbox.Parent then
             local bodyPart = char:FindFirstChild(partName)
             if bodyPart then
-                local overlapParams = OverlapParams.new()
-                overlapParams.FilterDescendantsInstances = {char}
-                overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-                local partsInBox = Workspace:GetPartBoundsInBox(hitbox.CFrame, hitbox.Size, overlapParams)
+                local op = OverlapParams.new()
+                op.FilterDescendantsInstances = {char}
+                op.FilterType = Enum.RaycastFilterType.Exclude
+                local partsInBox = Workspace:GetPartBoundsInBox(hitbox.CFrame, hitbox.Size, op)
                 for _, part in ipairs(partsInBox) do
                     local ballPart = FindBallPartLimb(part)
                     if ballPart then
-                        local touchKey = partName .. ":" .. ballPart:GetFullName()
-                        newTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
-                        if not LimbActiveTouches[touchKey] or (currentTime - LimbActiveTouches[touchKey].time) > LIMB_TOUCH_COOLDOWN then
-                            LimbActiveTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
+                        local key = partName .. ":" .. ballPart:GetFullName()
+                        newTouches[key] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
+                        if not LimbActiveTouches[key] or (currentTime - LimbActiveTouches[key].time) > LIMB_TOUCH_COOLDOWN then
+                            LimbActiveTouches[key] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
                             pcall(function()
                                 firetouchinterest(ballPart, bodyPart, 0)
                                 task.wait()
@@ -851,10 +610,8 @@ local function CheckLimbBallCollisions()
             end
         end
     end
-    for touchKey, touchData in pairs(LimbActiveTouches) do
-        if not newTouches[touchKey] and (currentTime - touchData.time) > LIMB_TOUCH_COOLDOWN then
-            LimbActiveTouches[touchKey] = nil
-        end
+    for key, d in pairs(LimbActiveTouches) do
+        if not newTouches[key] and (currentTime - d.time) > LIMB_TOUCH_COOLDOWN then LimbActiveTouches[key] = nil end
     end
 end
 
@@ -869,89 +626,83 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
+player.CharacterAdded:Connect(function()
     RemoveAllLimbHitboxes()
     task.wait(2)
     CreateAllLimbHitboxes()
 end)
 
-LimbReachL:AddToggle("LR_HeadEn", { Text = "Enable Head Reach", Default = false, Callback = function(v) reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadX", { Text = "Head X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadY", { Text = "Head Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddSlider("LR_HeadZ", { Text = "Head Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end })
-LimbReachL:AddDivider()
-LimbReachL:AddToggle("LR_RArmEn", { Text = "Enable Right Arm", Default = false, Callback = function(v) reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm") end })
-LimbReachL:AddToggle("LR_LArmEn", { Text = "Enable Left Arm", Default = false, Callback = function(v) reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmX", { Text = "Arm X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmY", { Text = "Arm Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddSlider("LR_ArmZ", { Text = "Arm Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-LimbReachL:AddDivider()
-LimbReachL:AddToggle("LR_RLegEn", { Text = "Enable Right Leg", Default = false, Callback = function(v) reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg") end })
-LimbReachL:AddToggle("LR_LLegEn", { Text = "Enable Left Leg", Default = false, Callback = function(v) reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegX", { Text = "Leg X Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegY", { Text = "Leg Y Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-LimbReachL:AddSlider("LR_LegZ", { Text = "Leg Z Size", Default = 1, Min = 0, Max = 10, Step = 0.1, Rounding = 1, Callback = function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+local lrL = LimbTab:Section({ Title = "Limb Hitbox Reach" })
+lrL:Toggle({ Title = "Enable Head Reach", Default = false, Callback = function(v) reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head") end })
+lrL:Slider({ Title = "Head X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end })
+lrL:Slider({ Title = "Head Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end })
+lrL:Slider({ Title = "Head Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end })
+lrL:Toggle({ Title = "Enable Right Arm", Default = false, Callback = function(v) reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm") end })
+lrL:Toggle({ Title = "Enable Left Arm", Default = false, Callback = function(v) reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm") end })
+lrL:Slider({ Title = "Arm X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+lrL:Slider({ Title = "Arm Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+lrL:Slider({ Title = "Arm Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
+lrL:Toggle({ Title = "Enable Right Leg", Default = false, Callback = function(v) reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg") end })
+lrL:Toggle({ Title = "Enable Left Leg", Default = false, Callback = function(v) reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg") end })
+lrL:Slider({ Title = "Leg X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+lrL:Slider({ Title = "Leg Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+lrL:Slider({ Title = "Leg Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
 
-LimbReachR:AddToggle("LR_HeadVis", { Text = "Head Visualizer", Default = false, Callback = function(v) reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head") end })
-LimbReachR:AddSlider("LR_HeadVisTrans", { Text = "Head Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end })
-LimbReachR:AddToggle("LR_RArmVis", { Text = "Right Arm Visualizer", Default = false, Callback = function(v) reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm") end })
-LimbReachR:AddToggle("LR_LArmVis", { Text = "Left Arm Visualizer", Default = false, Callback = function(v) reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm") end })
-LimbReachR:AddSlider("LR_ArmVisTrans", { Text = "Arm Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end })
-LimbReachR:AddToggle("LR_RLegVis", { Text = "Right Leg Visualizer", Default = false, Callback = function(v) reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg") end })
-LimbReachR:AddToggle("LR_LLegVis", { Text = "Left Leg Visualizer", Default = false, Callback = function(v) reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg") end })
-LimbReachR:AddSlider("LR_LegVisTrans", { Text = "Leg Vis Transparency", Default = 0.7, Min = 0, Max = 1, Step = 0.05, Rounding = 2, Callback = function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end })
-LimbReachR:AddButton({ Text = "Refresh All Limb Hitboxes", Func = function() RemoveAllLimbHitboxes() CreateAllLimbHitboxes() Notify("Limb hitboxes refreshed", 2) end })
-LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
+local lrR = LimbTab:Section({ Title = "Limb Visualizers" })
+lrR:Toggle({ Title = "Head Visualizer", Default = false, Callback = function(v) reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head") end })
+lrR:Slider({ Title = "Head Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end })
+lrR:Toggle({ Title = "Right Arm Visualizer", Default = false, Callback = function(v) reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm") end })
+lrR:Toggle({ Title = "Left Arm Visualizer", Default = false, Callback = function(v) reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm") end })
+lrR:Slider({ Title = "Arm Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end })
+lrR:Toggle({ Title = "Right Leg Visualizer", Default = false, Callback = function(v) reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg") end })
+lrR:Toggle({ Title = "Left Leg Visualizer", Default = false, Callback = function(v) reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg") end })
+lrR:Slider({ Title = "Leg Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end })
+lrR:Button({ Title = "Refresh All Limb Hitboxes", Justify = "Center", Callback = function() RemoveAllLimbHitboxes() CreateAllLimbHitboxes() WindUI:Notify({Title="Limb",Content="Refreshed"}) end })
+lrR:Button({ Title = "Disable All Limb Reach", Justify = "Center", Callback = function()
     reachSettings.HeadEnabled = false
     reachSettings.RightArmEnabled = false
     reachSettings.LeftArmEnabled = false
     reachSettings.RightLegEnabled = false
     reachSettings.LeftLegEnabled = false
     RemoveAllLimbHitboxes()
-    Notify("All limb reach OFF", 2)
+    WindUI:Notify({Title="Limb",Content="All OFF"})
 end })
 
-local BoostTab = Window:AddTab("Boosts", "zap")
-local BoostL = BoostTab:AddLeftGroupbox("Boosts")
-local CardL = BoostTab:AddLeftGroupbox("Card Adders")
-local StaminaL = BoostTab:AddLeftGroupbox("Unlimited Stamina")
-
+-- ============================================================
+-- BOOSTS + Infinite Stamina
+-- ============================================================
+local BoostTab = Window:Tab({ Title = "Boost", Icon = "zap" })
 local function FireBoost(id, skill)
     pcall(function()
-        local remote = Workspace:FindFirstChild("FE") and
-                       Workspace.FE:FindFirstChild("PlayerCard") and
-                       Workspace.FE.PlayerCard:FindFirstChild("Boost")
+        local remote = workspace:FindFirstChild("FE") and
+                       workspace.FE:FindFirstChild("PlayerCard") and
+                       workspace.FE.PlayerCard:FindFirstChild("Boost")
         if remote then remote:FireServer(id, skill, false) end
     end)
 end
 
-BoostL:AddButton({ Text = "Instant Stamina Adder", Func = function() FireBoost(1355887714, "SkillG") Notify("Stamina added", 2) end })
-BoostL:AddButton({ Text = "Shoot Power Boost", Func = function() FireBoost(3088044200, "SkillA") Notify("Shoot Power", 2) end })
-BoostL:AddButton({ Text = "Pass / Long Power Boost", Func = function() FireBoost(2254435268, "SkillB") Notify("Pass Power", 2) end })
-BoostL:AddButton({ Text = "Curve Power Boost", Func = function() FireBoost(1357236447, "SkillC") Notify("Curve Power", 2) end })
-BoostL:AddButton({ Text = "Tackle Power Boost", Func = function() FireBoost(1786301341, "SkillD") Notify("Tackle Power", 2) end })
-BoostL:AddButton({ Text = "Skill Power Boost", Func = function() FireBoost(1409659832, "SkillE") Notify("Skill Power", 2) end })
-BoostL:AddButton({ Text = "GK Power Boost", Func = function() FireBoost(1629744027, "SkillF") Notify("GK Power", 2) end })
-BoostL:AddButton({ Text = "Durability Boost", Func = function() FireBoost(4579283817, "SkillH") Notify("Durability", 2) end })
-BoostL:AddButton({ Text = "⭐ All Boosts", Func = function()
-    FireBoost(3088044200, "SkillA") FireBoost(2254435268, "SkillB")
-    FireBoost(1357236447, "SkillC") FireBoost(1786301341, "SkillD")
-    FireBoost(1409659832, "SkillE") FireBoost(1629744027, "SkillF")
-    FireBoost(4579283817, "SkillH") Notify("All boosts applied", 3)
-end })
+local sBoost = BoostTab:Section({ Title = "Stat Boosts" })
+sBoost:Button({ Title = "Instant Stamina", Justify = "Center", Callback = function() FireBoost(1355887714, "SkillG") end })
+sBoost:Button({ Title = "Shoot Power", Justify = "Center", Callback = function() FireBoost(3088044200, "SkillA") end })
+sBoost:Button({ Title = "Pass Power", Justify = "Center", Callback = function() FireBoost(2254435268, "SkillB") end })
+sBoost:Button({ Title = "Curve Power", Justify = "Center", Callback = function() FireBoost(1357236447, "SkillC") end })
+sBoost:Button({ Title = "Tackle Power", Justify = "Center", Callback = function() FireBoost(1786301341, "SkillD") end })
+sBoost:Button({ Title = "Skill Power", Justify = "Center", Callback = function() FireBoost(1409659832, "SkillE") end })
+sBoost:Button({ Title = "GK Power", Justify = "Center", Callback = function() FireBoost(1629744027, "SkillF") end })
+sBoost:Button({ Title = "Durability", Justify = "Center", Callback = function() FireBoost(4579283817, "SkillH") end })
 
-CardL:AddButton({ Text = "Legendary Card Adder", Func = function() FireBoost(14419698867, "Card") Notify("Legendary Card", 2) end })
-CardL:AddButton({ Text = "Bronze Card Adder", Func = function() FireBoost(14419693337, "Card") Notify("Bronze Card", 2) end })
-CardL:AddButton({ Text = "Silver Card Adder", Func = function() FireBoost(14419695959, "Card") Notify("Silver Card", 2) end })
+local sCards = BoostTab:Section({ Title = "Cards" })
+sCards:Button({ Title = "Legendary Card", Justify = "Center", Callback = function() FireBoost(14419698867, "Card") end })
+sCards:Button({ Title = "Bronze Card", Justify = "Center", Callback = function() FireBoost(14419693337, "Card") end })
+sCards:Button({ Title = "Silver Card", Justify = "Center", Callback = function() FireBoost(14419695959, "Card") end })
 
-StaminaL:AddLabel("WalkSpeed: 22 normal / 16 sprint")
+local BASE_WALKSPEED = 22
 local InfStamEnabled = false
 local InfStamOldNC = nil
 local InfStamIndexHooked = false
-
-StaminaL:AddToggle("UnlimitedStaminaToggle", {
-    Text = "Enable Unlimited Stamina",
-    Default = false,
+local sStam = BoostTab:Section({ Title = "Unlimited Stamina" })
+sStam:Toggle({
+    Title = "Enable Unlimited Stamina", Default = false,
     Callback = function(v)
         InfStamEnabled = v
         if v then
@@ -962,8 +713,8 @@ StaminaL:AddToggle("UnlimitedStaminaToggle", {
                 if not InfStamOldNC then InfStamOldNC = mt.__namecall end
                 mt.__namecall = newcclosure(function(self, ...)
                     if InfStamEnabled then
-                        local method = getnamecallmethod()
-                        if method == "FireServer" or method == "InvokeServer" then
+                        local m = getnamecallmethod()
+                        if m == "FireServer" or m == "InvokeServer" then
                             local n = tostring(self):lower()
                             if n:find("sprint") or n:find("stamina") then return end
                         end
@@ -982,201 +733,73 @@ StaminaL:AddToggle("UnlimitedStaminaToggle", {
                 end
                 setreadonly(mt, true)
             end)
-            local hum = GetHumanoid()
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
             if hum then hum.WalkSpeed = BASE_WALKSPEED end
-            Notify("Unlimited Stamina ON", 2)
-        else
-            Notify("Unlimited Stamina OFF", 2)
         end
     end,
 })
 
-local ReactTab = Window:AddTab("React", "swords")
-local ReactL = ReactTab:AddLeftGroupbox("Main React")
-local ReactR = ReactTab:AddRightGroupbox("React Methods")
-local ReactK = ReactTab:AddRightGroupbox("React Killer & Advanced")
-
-local NRC = { Enabled = false, Magnitude = 4, Fires = 2, Distance = 15, Conn = nil }
-
-ReactL:AddToggle("NRCToggle", {
-    Text = "No React Decline",
-    Default = false,
-    Callback = function(v)
-        NRC.Enabled = v
-        if v then
-            if NRC.Conn then NRC.Conn:Disconnect() end
-            NRC.Conn = RunService.Heartbeat:Connect(function()
-                if not NRC.Enabled then return end
-                local ball = GetMainBall() local root = Cache.Root
-                if not ball or not root then return end
-                if (ball.Position - root.Position).Magnitude <= NRC.Distance then
-                    pcall(function() ball.AssemblyLinearVelocity = (ball.Position - root.Position).Unit * NRC.Magnitude end)
-                end
-            end)
-            Notify("NRC ON", 2)
-        else
-            if NRC.Conn then NRC.Conn:Disconnect() NRC.Conn = nil end
-            Notify("NRC OFF", 2)
-        end
-    end,
-})
-ReactL:AddSlider("NRCMag", { Text = "Magnitude", Default = 4, Min = 1, Max = 20, Rounding = 1, Callback = function(v) NRC.Magnitude = v end })
-ReactL:AddSlider("NRCDist", { Text = "Distance", Default = 15, Min = 1, Max = 50, Rounding = 1, Suffix = " studs", Callback = function(v) NRC.Distance = v end })
-
+-- ============================================================
+-- REACT
+-- ============================================================
+local ReactTab = Window:Tab({ Title = "Reacts", Icon = "star" })
+local ReactsSection = ReactTab:Section({ Title = "Reacts" })
 local function FireUniversalReact(mag)
     pcall(function()
-        local ball = GetMainBall() local root = Cache.Root
+        local ball = GetMainBall()
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
         if not ball or not root then return end
         ball.AssemblyLinearVelocity = (ball.Position - root.Position).Unit * mag
     end)
 end
-
-ReactR:AddButton({ Text = "Universal React", Func = function() FireUniversalReact(8) Notify("Universal", 2) end })
-ReactR:AddButton({ Text = "Main React", Func = function() FireUniversalReact(10) Notify("Main React", 2) end })
-ReactR:AddButton({ Text = "Method #2 (Velocity)", Func = function()
-    local ball = GetMainBall()
-    if ball then ball.AssemblyLinearVelocity = Vector3.new(8, 8, 8) end
-    Notify("Method 2", 2)
-end })
-ReactR:AddButton({ Text = "Method #3 (Remote)", Func = function()
+ReactsSection:Button({ Title = "Universal React", Justify = "Center", Callback = function() FireUniversalReact(8) end })
+ReactsSection:Button({ Title = "Main React", Justify = "Center", Callback = function() FireUniversalReact(10) end })
+ReactsSection:Button({ Title = "Break React", Justify = "Center", Callback = function() FireUniversalReact(15) end })
+ReactsSection:Button({ Title = "Defence React", Justify = "Center", Callback = function() FireUniversalReact(6) end })
+ReactsSection:Button({ Title = "Prztxl React", Justify = "Center", Callback = function()
     pcall(function()
-        local fe = GetFE()
-        if not fe then return end
-        local scorer = fe:FindFirstChild("Scorer")
-        if not scorer then return end
-        local ball = GetMainBall()
-        if not ball then return end
-        for _, remote in ipairs(scorer:GetChildren()) do
-            if remote:IsA("RemoteEvent") then for i = 1, 3 do remote:FireServer(ball) end end
-        end
+        local t = workspace.TPSSystem and workspace.TPSSystem:FindFirstChild("TPS")
+        if t then t.AssemblyLinearVelocity = Vector3.new(2.5, 2.5, 2.5) end
     end)
-    Notify("Method 3", 2)
-end })
-ReactR:AddButton({ Text = "Break React", Func = function() FireUniversalReact(15) Notify("Break React", 2) end })
-ReactR:AddButton({ Text = "Defence React", Func = function() FireUniversalReact(6) Notify("Defence", 2) end })
-ReactR:AddButton({ Text = "Prztxl React", Func = function()
-    pcall(function()
-        local tpsPart = workspace.TPSSystem and workspace.TPSSystem:FindFirstChild("TPS")
-        if tpsPart then tpsPart.AssemblyLinearVelocity = Vector3.new(2.5, 2.5, 2.5) end
-    end)
-    Notify("Prztxl React", 2)
 end })
 
-local ReactKiller = { Enabled = false, Fires = 30, Distance = 20, Conn = nil }
-ReactK:AddToggle("ReactKillerToggle", {
-    Text = "React Killer",
-    Default = false,
-    Callback = function(v)
-        ReactKiller.Enabled = v
-        if v then
-            if ReactKiller.Conn then ReactKiller.Conn:Disconnect() end
-            ReactKiller.Conn = RunService.Heartbeat:Connect(function()
-                if not ReactKiller.Enabled then return end
-                local ball = GetMainBall() local root = Cache.Root
-                if not ball or not root then return end
-                if (ball.Position - root.Position).Magnitude > ReactKiller.Distance then return end
-                local fe = GetFE()
-                if not fe then return end
-                local scorer = fe:FindFirstChild("Scorer")
-                if not scorer then return end
-                for _, remote in ipairs(scorer:GetChildren()) do
-                    if remote:IsA("RemoteEvent") then
-                        for i = 1, ReactKiller.Fires do pcall(function() remote:FireServer(ball) end) end
-                    end
-                end
-            end)
-            Notify("React Killer ON", 2)
-        else
-            if ReactKiller.Conn then ReactKiller.Conn:Disconnect() ReactKiller.Conn = nil end
-        end
-    end,
-})
-ReactK:AddSlider("ReactKillerFires", { Text = "Fires per frame", Default = 30, Min = 1, Max = 100, Rounding = 1, Callback = function(v) ReactKiller.Fires = v end })
-ReactK:AddSlider("ReactKillerDist", { Text = "Distance", Default = 20, Min = 1, Max = 50, Rounding = 1, Callback = function(v) ReactKiller.Distance = v end })
-
-local NetTab = Window:AddTab("Network", "wifi")
-local NetL = NetTab:AddLeftGroupbox("Delay Reducer")
-local NetR = NetTab:AddRightGroupbox("Ping Simulation")
-
-local DelayReducer = { Enabled = false, Mode = "Normal" }
-local MODE_PRESETS = {
-    Ultra = { ping = 2, jitter = 1 }, Low = { ping = 5, jitter = 2 },
-    Medium = { ping = 10, jitter = 5 }, Normal = { ping = 12, jitter = 7 },
-}
-local NetworkOK = false
-local NetworkSettings = nil
-pcall(function()
-    NetworkSettings = settings():GetService("NetworkSettings")
-    NetworkOK = NetworkSettings and NetworkSettings.IncomingReplicationLag ~= nil
-end)
-local function ApplyMode(mode)
-    if not NetworkOK then Notify("NetworkSettings non supporte", 3) return end
-    local p = MODE_PRESETS[mode] or MODE_PRESETS.Normal
-    pcall(function()
-        NetworkSettings.IncomingReplicationLag = p.ping / 1000
-        pcall(function() NetworkSettings.InboundNetworkMinDelayMs = p.ping end)
-        pcall(function() NetworkSettings.InboundNetworkJitterMs = p.jitter end)
-    end)
-    DelayReducer.Mode = mode DelayReducer.Enabled = true
-    Notify("Mode: " .. mode, 2)
-end
-local function ResetMode()
-    if not NetworkOK then return end
-    pcall(function()
-        NetworkSettings.IncomingReplicationLag = 0
-        pcall(function() NetworkSettings.InboundNetworkMinDelayMs = 0 end)
-        pcall(function() NetworkSettings.InboundNetworkJitterMs = 0 end)
-    end)
-    DelayReducer.Enabled = false
-end
-NetL:AddToggle("DelayReducerToggle", { Text = "Enable Delay Reducer", Default = false, Callback = function(v) if v then ApplyMode(DelayReducer.Mode or "Low") else ResetMode() end end })
-NetL:AddDropdown("DelayModeDD", { Text = "Mode", Values = { "Ultra", "Low", "Medium", "Normal" }, Default = "Normal", Callback = function(v) if DelayReducer.Enabled then ApplyMode(v) else DelayReducer.Mode = v end end })
-NetR:AddSlider("SimulatedPing", { Text = "Simulated Ping (ms)", Default = 0, Min = 0, Max = 500, Rounding = 1, Callback = function(v)
-    if v > 0 and NetworkOK then
-        pcall(function()
-            NetworkSettings.IncomingReplicationLag = v / 1000
-            NetworkSettings.InboundNetworkMinDelayMs = v
-            NetworkSettings.InboundNetworkJitterMs = math.floor(v * 0.2)
+local NRC = { Enabled = false, Magnitude = 4, Distance = 15, Conn = nil }
+local sNRC = ReactTab:Section({ Title = "No React Decline" })
+sNRC:Toggle({ Title = "Enable NRC", Default = false, Callback = function(v)
+    NRC.Enabled = v
+    if v then
+        if NRC.Conn then NRC.Conn:Disconnect() end
+        NRC.Conn = RunService.Heartbeat:Connect(function()
+            if not NRC.Enabled then return end
+            local ball = GetMainBall()
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not ball or not root then return end
+            if (ball.Position - root.Position).Magnitude <= NRC.Distance then
+                pcall(function() ball.AssemblyLinearVelocity = (ball.Position - root.Position).Unit * NRC.Magnitude end)
+            end
         end)
-    elseif v == 0 then ResetMode() end
-end })
-
-local FFlagTab = Window:AddTab("FFlags", "settings-2")
-local FFlagL = FFlagTab:AddLeftGroupbox("Presets (2026)")
-local FFlagInjectorL = FFlagTab:AddLeftGroupbox("Custom Injector")
-local FFlagPresets = {
-    ["FPS Boost"] = { ["DFIntMaxFrameBufferSize"] = "4", ["FFlagDisablePostFx"] = "True", ["FIntRenderShadowIntensity"] = "0", ["FIntRenderGrassDetailStrands"] = "0" },
-    ["Low End PC"] = { ["DFIntMaxFrameBufferSize"] = "4", ["FIntRenderShadowIntensity"] = "0", ["FIntRenderGrassDetailStrands"] = "0" },
-    ["MTU 1400"] = { ["DFIntConnectionMTUSize"] = "1400" },
-    ["MTU 1472"] = { ["DFIntConnectionMTUSize"] = "1472" },
-}
-for name, _ in pairs(FFlagPresets) do
-    FFlagL:AddButton({ Text = name, Func = function()
-        local preset = FFlagPresets[name]
-        if preset and setfflag then
-            for k, v in pairs(preset) do pcall(function() setfflag(k, tostring(v)) end) end
-            Notify(name .. " applied", 2)
-        end
-    end })
-end
-local FFlagKeyValue = { Key = "", Value = "" }
-FFlagInjectorL:AddInput("FFlagKeyInput", { Text = "FFlag Name", Placeholder = "DFIntConnectionMTUSize", Finished = true, Callback = function(v) FFlagKeyValue.Key = v end })
-FFlagInjectorL:AddInput("FFlagValueInput", { Text = "FFlag Value", Placeholder = "1472", Finished = true, Callback = function(v) FFlagKeyValue.Value = v end })
-FFlagInjectorL:AddButton({ Text = "Apply", Func = function()
-    if FFlagKeyValue.Key ~= "" and FFlagKeyValue.Value ~= "" then
-        if setfflag then setfflag(FFlagKeyValue.Key, tostring(FFlagKeyValue.Value)) end
-        Notify("Applied: " .. FFlagKeyValue.Key, 2)
+    else
+        if NRC.Conn then NRC.Conn:Disconnect() NRC.Conn = nil end
     end
 end })
+sNRC:Slider({ Title = "Magnitude", Step = 1, Value = { Min = 1, Max = 20, Default = 4 }, Callback = function(v) NRC.Magnitude = v end })
+sNRC:Slider({ Title = "Distance", Step = 1, Value = { Min = 1, Max = 50, Default = 15 }, Callback = function(v) NRC.Distance = v end })
 
-local SkyTab = Window:AddTab("Sky", "sun")
-local SkyL = SkyTab:AddLeftGroupbox("Skybox (Local)")
-local TimeL = SkyTab:AddRightGroupbox("Time / Ambient")
+-- ============================================================
+-- SKY CHANGER
+-- ============================================================
+local SkyTab = Window:Tab({ Title = "Sky", Icon = "cloud-sun" })
+local SkyL = SkyTab:Section({ Title = "Skybox (Local)" })
+local TimeL = SkyTab:Section({ Title = "Time / Ambient" })
+local SkyLighting = game:GetService("Lighting")
 local SkyboxCfg = { Enabled = false, Current = "Default", OriginalSky = nil, OriginalSkyParent = nil }
 pcall(function()
-    local sky = Lighting:FindFirstChildOfClass("Sky")
+    local sky = SkyLighting:FindFirstChildOfClass("Sky")
     if not sky then
-        for _, c in ipairs(Lighting:GetDescendants()) do
+        for _, c in ipairs(SkyLighting:GetDescendants()) do
             if c:IsA("Sky") then sky = c break end
         end
     end
@@ -1199,7 +822,7 @@ for k in pairs(SKYBOX_PRESETS) do table.insert(SKY_LIST, k) end
 table.sort(SKY_LIST)
 local function RemoveCustomSky()
     pcall(function()
-        local ex = Lighting:FindFirstChild("VETA_Sky")
+        local ex = SkyLighting:FindFirstChild("VETA_Sky")
         if ex then ex:Destroy() end
     end)
 end
@@ -1209,317 +832,144 @@ local function ApplySkybox(name)
         local preset = SKYBOX_PRESETS[name]
         RemoveCustomSky()
         if preset == nil then
-            if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or Lighting end
+            if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or SkyLighting end
             return
         end
         if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = nil end
         local sky = Instance.new("Sky")
         sky.Name = "VETA_Sky"
         for k, v in pairs(preset) do pcall(function() sky[k] = v end) end
-        sky.Parent = Lighting
+        sky.Parent = SkyLighting
     end)
 end
 SkyL:Dropdown({ Title = "Skybox Preset", Values = SKY_LIST, Default = "Default", Callback = function(v) SkyboxCfg.Current = v if SkyboxCfg.Enabled then ApplySkybox(v) end end })
 SkyL:Toggle({ Title = "Enable Custom Skybox", Default = false, Callback = function(v)
     SkyboxCfg.Enabled = v
     if v then ApplySkybox(SkyboxCfg.Current)
-    else RemoveCustomSky() if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or Lighting end end
+    else RemoveCustomSky() if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or SkyLighting end end
 end })
-SkyL:Button({ Title = "Next Skybox", Callback = function()
+SkyL:Button({ Title = "Next Skybox", Justify = "Center", Callback = function()
     local idx = table.find(SKY_LIST, SkyboxCfg.Current) or 1
     local n = idx + 1 if n > #SKY_LIST then n = 1 end
     SkyboxCfg.Current = SKY_LIST[n]
     if SkyboxCfg.Enabled then ApplySkybox(SkyboxCfg.Current) end
 end })
-SkyL:Button({ Title = "Random Skybox", Callback = function()
-    local r = SKY_LIST[math.random(1, #SKY_LIST)]
-    SkyboxCfg.Current = r
-    if SkyboxCfg.Enabled then ApplySkybox(r) end
-end })
-SkyL:Button({ Title = "Reset Skybox", Callback = function()
+SkyL:Button({ Title = "Reset Skybox", Justify = "Center", Callback = function()
     RemoveCustomSky()
-    if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or Lighting end
+    if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or SkyLighting end
 end })
 local TimeCfg = { Enabled = false, Value = 14 }
 local TimeLockConn = nil
-TimeL:Slider({ Title = "Clock Time (hours)", Step = 1, Value = { Min = 0, Max = 24, Default = 14 }, Callback = function(v) TimeCfg.Value = v if TimeCfg.Enabled then Lighting.ClockTime = v end end })
+TimeL:Slider({ Title = "Clock Time (hours)", Step = 1, Value = { Min = 0, Max = 24, Default = 14 }, Callback = function(v) TimeCfg.Value = v if TimeCfg.Enabled then SkyLighting.ClockTime = v end end })
 TimeL:Toggle({ Title = "Lock Clock Time", Default = false, Callback = function(v)
     TimeCfg.Enabled = v
     if TimeLockConn then TimeLockConn:Disconnect() TimeLockConn = nil end
     if v then
-        Lighting.ClockTime = TimeCfg.Value
+        SkyLighting.ClockTime = TimeCfg.Value
         TimeLockConn = RunService.Heartbeat:Connect(function()
             if not TimeCfg.Enabled then return end
-            if math.abs(Lighting.ClockTime - TimeCfg.Value) > 0.05 then
-                Lighting.ClockTime = TimeCfg.Value
-            end
+            if math.abs(SkyLighting.ClockTime - TimeCfg.Value) > 0.05 then SkyLighting.ClockTime = TimeCfg.Value end
         end)
     end
 end })
-TimeL:Button({ Title = "Bright Ambient", Callback = function() Lighting.Ambient = Color3.fromRGB(150,150,150) Lighting.OutdoorAmbient = Color3.fromRGB(150,150,150) end })
-TimeL:Button({ Title = "Dark Ambient", Callback = function() Lighting.Ambient = Color3.fromRGB(20,20,20) Lighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
-TimeL:Button({ Title = "Reset Ambient", Callback = function() Lighting.Ambient = Color3.fromRGB(70,70,70) Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128) end })
+TimeL:Button({ Title = "Bright Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(150,150,150) SkyLighting.OutdoorAmbient = Color3.fromRGB(150,150,150) end })
+TimeL:Button({ Title = "Dark Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(20,20,20) SkyLighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
 
-local BallTab = Window:AddTab("Ball", "circle-dot")
-local BallColorL = BallTab:AddLeftGroupbox("Color Ball")
-local FakeSizeR = BallTab:AddRightGroupbox("Fake Sizes")
-local BallColor = { Enabled = false, Color = Color3.fromRGB(255, 105, 180), ApplyToPractice = true, Conn = nil }
-local function ApplyBallColor()
-    if not BallColor.Enabled then return end
-    pcall(function()
-        local ball = GetMainBall()
-        if ball and ball:IsA("BasePart") then ball.Color = BallColor.Color end
-        if BallColor.ApplyToPractice then
-            for _, b in ipairs(GetPracticeBalls()) do b.Color = BallColor.Color end
-        end
-    end)
-end
-BallColorL:AddToggle("BallColorToggle", {
-    Text = "Enable Color Ball", Default = false,
-    Callback = function(v)
-        BallColor.Enabled = v
-        if v then
-            if BallColor.Conn then BallColor.Conn:Disconnect() end
-            BallColor.Conn = RunService.RenderStepped:Connect(ApplyBallColor)
-        else
-            if BallColor.Conn then BallColor.Conn:Disconnect() BallColor.Conn = nil end
-        end
-    end,
-})
-local colorPresets = {
-    ["White"] = Color3.fromRGB(255,255,255), ["Pink"] = Color3.fromRGB(255,105,180),
-    ["Red"] = Color3.fromRGB(255,0,0), ["Blue"] = Color3.fromRGB(0,100,255),
-    ["Green"] = Color3.fromRGB(0,255,0), ["Yellow"] = Color3.fromRGB(255,255,0),
-}
-for name, color in pairs(colorPresets) do
-    BallColorL:AddButton({ Text = name, Func = function() BallColor.Color = color if BallColor.Enabled then ApplyBallColor() end end })
-end
-local FakeSize = { TPS = 2.3, Practice = 2.3, Enabled = false, Conn = nil, Originals = {} }
-local function ApplyFakeSizes()
-    pcall(function()
-        local ball = GetMainBall()
-        if ball then
-            if not FakeSize.Originals[ball] then FakeSize.Originals[ball] = ball.Size end
-            ball.Size = Vector3.new(FakeSize.TPS, FakeSize.TPS, FakeSize.TPS)
-        end
-        for _, b in ipairs(GetPracticeBalls()) do
-            if not FakeSize.Originals[b] then FakeSize.Originals[b] = b.Size end
-            b.Size = Vector3.new(FakeSize.Practice, FakeSize.Practice, FakeSize.Practice)
-        end
-    end)
-end
-FakeSizeR:AddSlider("FakeTPSSize", { Text = "Fake TPS Size", Default = 2.3, Min = 0.5, Max = 6.5, Rounding = 1, Callback = function(v) FakeSize.TPS = v if FakeSize.Enabled then ApplyFakeSizes() end end })
-FakeSizeR:AddToggle("FakeSizeToggle", {
-    Text = "Enable Fake Sizes", Default = false,
-    Callback = function(v)
-        FakeSize.Enabled = v
-        if v then
-            if FakeSize.Conn then FakeSize.Conn:Disconnect() end
-            FakeSize.Conn = RunService.RenderStepped:Connect(ApplyFakeSizes)
-        else
-            if FakeSize.Conn then FakeSize.Conn:Disconnect() FakeSize.Conn = nil end
-            pcall(function()
-                for part, size in pairs(FakeSize.Originals) do
-                    if part and part.Parent then part.Size = size end
-                end
-                FakeSize.Originals = {}
-            end)
-        end
-    end,
-})
-
-local TeleTab = Window:AddTab("Teleporter", "map-pin")
-local TeleL = TeleTab:AddLeftGroupbox("Locations")
-local function TpTo(pos)
-    local root = GetRoot()
-    if root then root.CFrame = CFrame.new(pos) ResetVelocity() end
-end
-TeleL:AddButton({ Text = "TP Pitch", Func = function() TpTo(Vector3.new(114, 175, 278)) Notify("TP Pitch", 2) end })
-TeleL:AddButton({ Text = "TP Ball", Func = function()
-    local ball = GetMainBall() local root = GetRoot()
-    if root and ball then root.CFrame = CFrame.new(ball.Position + Vector3.new(0, 3, 0)) ResetVelocity() end
-end })
-TeleL:AddButton({ Text = "TP Spawn", Func = function() TpTo(Vector3.new(0, 180, 278)) end })
-TeleL:AddButton({ Text = "💾 Save Position", Func = function()
-    local root = GetRoot()
-    if root then State.SavedPos = root.CFrame Notify("Position saved", 2) end
-end })
-TeleL:AddButton({ Text = "↩️ Return to Saved", Func = function()
-    if State.SavedPos then
-        local root = GetRoot()
-        if root then root.CFrame = State.SavedPos ResetVelocity() Notify("Returned", 2) end
+-- ============================================================
+-- TOOLS (No cooldown, AutoCatch)
+-- ============================================================
+local ToolTab = Window:Tab({ Title = "Tools", Icon = "wrench" })
+local ToolCooldown = { Enabled = false, Value = 0.05, Conn = nil }
+local sTools = ToolTab:Section({ Title = "Tools" })
+sTools:Toggle({ Title = "No Tool Cooldown", Default = false, Callback = function(v)
+    ToolCooldown.Enabled = v
+    if v then
+        if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() end
+        ToolCooldown.Conn = RunService.Heartbeat:Connect(function()
+            if not ToolCooldown.Enabled then return end
+            local char = player.Character
+            if not char then return end
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") then tool:SetAttribute("Cooldown", ToolCooldown.Value) end
+            end
+        end)
+    else
+        if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() ToolCooldown.Conn = nil end
     end
 end })
-
-local ToolTab = Window:AddTab("Tools", "wrench")
-local ToolL = ToolTab:AddLeftGroupbox("Tools")
-local ExtraL = ToolTab:AddRightGroupbox("Extra Tools")
-local ToolCooldown = { Enabled = false, Value = 0.05, Conn = nil }
-ToolL:AddToggle("ToolCooldownToggle", {
-    Text = "No Tool Cooldown", Default = false,
-    Callback = function(v)
-        ToolCooldown.Enabled = v
-        if v then
-            if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() end
-            ToolCooldown.Conn = RunService.Heartbeat:Connect(function()
-                if not ToolCooldown.Enabled then return end
-                local char = GetCharacter()
-                if not char then return end
-                for _, tool in ipairs(char:GetChildren()) do
-                    if tool:IsA("Tool") then tool:SetAttribute("Cooldown", ToolCooldown.Value) end
-                end
-            end)
-        else
-            if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() ToolCooldown.Conn = nil end
-        end
-    end,
-})
-ToolL:AddSlider("ToolCooldownValue", { Text = "Cooldown Value", Default = 0.05, Min = 0, Max = 1, Rounding = 2, Suffix = "s", Callback = function(v) ToolCooldown.Value = v end })
+sTools:Slider({ Title = "Cooldown Value", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.05 }, Callback = function(v) ToolCooldown.Value = v end })
 
 local AutoCatch = { Enabled = false, Distance = 15, Conn = nil }
-ExtraL:AddToggle("AutoCatchToggle", {
-    Text = "Auto Catch", Default = false,
-    Callback = function(v)
-        AutoCatch.Enabled = v
-        if v then
-            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
-            AutoCatch.Conn = RunService.Heartbeat:Connect(function()
-                if not AutoCatch.Enabled then return end
-                local ball = GetMainBall() local root = Cache.Root
-                if not ball or not root then return end
-                if (ball.Position - root.Position).Magnitude > AutoCatch.Distance then return end
-                local char = Cache.Character
-                if char then
-                    for _, name in ipairs({"Right Arm", "Left Arm"}) do
-                        local arm = char:FindFirstChild(name)
-                        if arm then
-                            pcall(function()
-                                firetouchinterest(arm, ball, 0)
-                                firetouchinterest(arm, ball, 1)
-                            end)
-                        end
-                    end
+local sExtra = ToolTab:Section({ Title = "Extra Tools" })
+sExtra:Toggle({ Title = "Auto Catch", Default = false, Callback = function(v)
+    AutoCatch.Enabled = v
+    if v then
+        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
+        AutoCatch.Conn = RunService.Heartbeat:Connect(function()
+            if not AutoCatch.Enabled then return end
+            local ball = GetMainBall()
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not ball or not root or not char then return end
+            if (ball.Position - root.Position).Magnitude > AutoCatch.Distance then return end
+            for _, name in ipairs({"Right Arm", "Left Arm"}) do
+                local arm = char:FindFirstChild(name)
+                if arm then
+                    pcall(function()
+                        firetouchinterest(arm, ball, 0)
+                        firetouchinterest(arm, ball, 1)
+                    end)
                 end
-            end)
-        else
-            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
-        end
-    end,
-})
-ExtraL:AddSlider("AutoCatchDist", { Text = "Distance", Default = 15, Min = 1, Max = 40, Rounding = 1, Callback = function(v) AutoCatch.Distance = v end })
-ExtraL:AddButton({ Text = "Release Ball", Func = function()
+            end
+        end)
+    else
+        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
+    end
+end })
+sExtra:Slider({ Title = "AutoCatch Distance", Step = 1, Value = { Min = 1, Max = 40, Default = 15 }, Callback = function(v) AutoCatch.Distance = v end })
+sExtra:Button({ Title = "Release Ball", Justify = "Center", Callback = function()
     pcall(function()
-        local char = GetCharacter()
+        local char = player.Character
         if char then
             local tool = char:FindFirstChildOfClass("Tool")
             if tool then tool:Unequip() end
         end
     end)
 end })
-ExtraL:AddButton({ Text = "Pull Vector", Func = function()
+sExtra:Button({ Title = "Pull Vector", Justify = "Center", Callback = function()
     pcall(function()
-        local root = GetRoot() local ball = GetMainBall()
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local ball = GetMainBall()
         if root and ball then ball.AssemblyLinearVelocity = (root.Position - ball.Position).Unit * 100 end
     end)
 end })
 
-local EspTab = Window:AddTab("ESP", "eye")
-local EspL = EspTab:AddLeftGroupbox("ESP Ball")
-local EspVisualR = EspTab:AddRightGroupbox("Visual Settings")
-local Esp = { Enabled = false, Color = Color3.fromRGB(255,105,180), Transparency = 0.3, Highlights = {} }
-local function ClearEsp()
-    for _, h in pairs(Esp.Highlights) do pcall(function() h:Destroy() end) end
-    Esp.Highlights = {}
-end
-local function SyncEsp()
-    if not Esp.Enabled then return end
-    local balls = GetBallList()
-    for ball, h in pairs(Esp.Highlights) do
-        if not ball.Parent or not h.Parent then
-            pcall(function() h:Destroy() end)
-            Esp.Highlights[ball] = nil
-        end
-    end
-    for _, ball in ipairs(balls) do
-        local h = Esp.Highlights[ball]
-        if not h then
-            h = Instance.new("Highlight")
-            h.Name = "FireHub_ESP"
-            h.FillColor = Esp.Color
-            h.FillTransparency = Esp.Transparency
-            h.OutlineColor = Esp.Color
-            h.OutlineTransparency = 0
-            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            h.Adornee = ball
-            h.Parent = CoreGui
-            Esp.Highlights[ball] = h
-        end
+-- ============================================================
+-- BALL CUSTOM
+-- ============================================================
+local BallTab = Window:Tab({ Title = "Ball Custom", Icon = "circle" })
+local tpsPart = workspace:FindFirstChild("TPSSystem") and workspace.TPSSystem:FindFirstChild("TPS")
+local originalTPSSize = (tpsPart and tpsPart:IsA("BasePart") and tpsPart.Size) or Vector3.new(5,5,5)
+local currentTPSSize = originalTPSSize.X
+local function resizeTPS(size)
+    if tpsPart and tpsPart.Parent then
+        pcall(function() tpsPart.Size = Vector3.new(size, size, size) end)
     end
 end
-RunService.RenderStepped:Connect(function() if Esp.Enabled then SyncEsp() end end)
-EspL:AddToggle("EspEnabled", { Text = "Enable ESP Ball", Default = false, Callback = function(v) Esp.Enabled = v if not v then ClearEsp() end end })
-EspL:AddSlider("EspTransparency", { Text = "ESP Transparency", Default = 0.3, Min = 0, Max = 1, Rounding = 2, Callback = function(v) Esp.Transparency = v end })
-for _, data in ipairs({{"Pink",255,105,180},{"Red",255,0,0},{"Green",0,255,0},{"Blue",0,150,255},{"Yellow",255,215,0},{"White",255,255,255}}) do
-    EspVisualR:AddButton({ Text = data[1], Func = function() Esp.Color = Color3.fromRGB(data[2], data[3], data[4]) end })
-end
-
-local PerfTab = Window:AddTab("Performance", "rocket")
-local PerfL = PerfTab:AddLeftGroupbox("FPS")
-local PerfR = PerfTab:AddRightGroupbox("FOV")
-local FPS = { Enabled = false, Target = 240 }
-local function SetFpsCap(value) pcall(function() if setfpscap then setfpscap(value) end end) end
-PerfL:AddToggle("FPSUnlock", { Text = "Enable FPS Unlocker", Default = false, Callback = function(v) FPS.Enabled = v if v then SetFpsCap(FPS.Target) else SetFpsCap(60) end end })
-PerfL:AddSlider("FPSTarget", { Text = "Target FPS", Default = 240, Min = 30, Max = 999, Rounding = 0, Callback = function(v) FPS.Target = v if FPS.Enabled then SetFpsCap(v) end end })
-PerfR:AddSlider("FOVSlider", { Text = "Field of View", Default = 70, Min = 50, Max = 120, Rounding = 0, Suffix = " deg", Callback = function(v) pcall(function() Workspace.CurrentCamera.FieldOfView = v end) end })
-
-local BodyTab = Window:AddTab("Body", "user")
-local BodyL = BodyTab:AddLeftGroupbox("Body Modifications")
-local BodyR = BodyTab:AddRightGroupbox("Anti / Recovery")
-BodyL:AddButton({ Text = "Remove Accessories", Func = function()
-    pcall(function()
-        local char = GetCharacter()
-        if char then
-            for _, acc in pairs(char:GetChildren()) do
-                if acc:IsA("Accessory") then acc:Destroy() end
-            end
-        end
-    end)
-end })
-local AntiInjury = { Enabled = false, Conn = nil }
-BodyR:AddToggle("AntiInjuryToggle", { Text = "Anti-Injury", Default = false, Callback = function(v)
-    AntiInjury.Enabled = v
-    if v then
-        if AntiInjury.Conn then AntiInjury.Conn:Disconnect() end
-        AntiInjury.Conn = RunService.Heartbeat:Connect(function()
-            local char = GetCharacter()
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum and hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
-            end
-        end)
-    else
-        if AntiInjury.Conn then AntiInjury.Conn:Disconnect() AntiInjury.Conn = nil end
-    end
+local sBallSize = BallTab:Section({ Title = "Ball Size Slider" })
+sBallSize:Slider({ Title = "TPS Size", Step = 1, Value = { Min = 1, Max = 20, Default = currentTPSSize }, Callback = function(v) currentTPSSize = v resizeTPS(v) end })
+sBallSize:Button({ Title = "Reset TPS Size", Justify = "Center", Callback = function()
+    currentTPSSize = originalTPSSize.X
+    resizeTPS(currentTPSSize)
 end })
 
-local ProtectTab = Window:AddTab("Protection", "shield")
-local ProtectL = ProtectTab:AddLeftGroupbox("Anti-Ban")
-ProtectL:AddToggle("AntiBanToggle", { Text = "Anti-Ban Extreme", Default = true, Callback = function(v) AntiBan.Enabled = v Notify("Anti-Ban " .. (v and "ON" or "OFF"), 2) end })
-local AntiAFKConn = nil
-ProtectL:AddToggle("AntiAFK", { Text = "Anti-AFK", Default = false, Callback = function(v)
-    if v then
-        if AntiAFKConn then AntiAFKConn:Disconnect() end
-        AntiAFKConn = LocalPlayer.Idled:Connect(function()
-            pcall(function() VirtualUser:CaptureController() VirtualUser:ClickButton2(Vector2.new()) end)
-        end)
-    else
-        if AntiAFKConn then AntiAFKConn:Disconnect() AntiAFKConn = nil end
-    end
-end })
-
-local MobileTab = Window:AddTab("Mobile GK", "mouse-pointer")
-local MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
-local MobR = MobileTab:AddRightGroupbox("Button Settings")
+-- ============================================================
+-- MOBILE GK ON-SCREEN BUTTONS
+-- ============================================================
+local MobileTab = Window:Tab({ Title = "Mobile GK", Icon = "hand" })
+local MobL = MobileTab:Section({ Title = "On-Screen Buttons" })
+local MobR = MobileTab:Section({ Title = "Button Settings" })
 
 local CC = {
     mobEnabled = true,
@@ -1528,12 +978,12 @@ local CC = {
     positions = {},
 }
 local function ccFindTool(name)
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    local ch = LocalPlayer.Character
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
     return (bp and bp:FindFirstChild(name)) or (ch and ch:FindFirstChild(name))
 end
 local function ccGkTool()
-    local tc = LocalPlayer.TeamColor
+    local tc = player.TeamColor
     if tc == BrickColor.new("Camo") then return ccFindTool("ToolGGK") end
     if tc == BrickColor.new("Really blue") then return ccFindTool("ToolBGK") end
     return ccFindTool("ToolGGK") or ccFindTool("ToolBGK")
@@ -1574,7 +1024,8 @@ local function ccJump()
         end)
         if ok then return true end
     end
-    local h = GetHumanoid()
+    local char = player.Character
+    local h = char and char:FindFirstChildOfClass("Humanoid")
     if h and h.Parent and h.Health > 0 then
         pcall(function()
             h:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
@@ -1608,7 +1059,7 @@ local CC_DEFAULT_POS = {
     ccKS  = UDim2.new(0.62, 0, 0.66, 0),
     ccJKS = UDim2.new(0.76, 0, 0.66, 0),
 }
-local ccRoot = CoreGui
+local ccRoot = game:GetService("CoreGui")
 pcall(function()
     local ok, hui = pcall(gethui)
     if ok and hui then ccRoot = hui end
@@ -1701,9 +1152,7 @@ local function ccAddButton(def)
     ccRefs[def.id] = { btn = btn, stroke = stroke }
 end
 for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
-task.defer(function()
-    ccGui.Enabled = CC.btn.visible
-end)
+task.defer(function() ccGui.Enabled = CC.btn.visible end)
 local function ccSyncSizes()
     for _, r in pairs(ccRefs) do r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size) end
 end
@@ -1730,30 +1179,45 @@ getgenv().TPSULT_CC = {
     SyncSizes = ccSyncSizes, SyncOpacity = ccSyncOpacity,
     SyncLock = ccSyncLock, SyncVisible = ccSyncVisible,
 }
-MobL:AddToggle("MobShowButtons", { Text = "Show On-Screen Buttons", Default = true, Callback = function(v) CC.btn.visible = v ccSyncVisible() Notify("Buttons " .. (v and "shown" or "hidden"), 2) end })
-MobL:AddToggle("MobLockButtons", { Text = "Lock Buttons (tap = run)", Default = false, Callback = function(v) CC.btn.locked = v ccSyncLock() Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2) end })
-MobL:AddToggle("MobEnableMacros", { Text = "Enable Macros", Default = true, Callback = function(v) CC.mobEnabled = v end })
-MobL:AddButton({ Text = "Test Keep+Save", Func = function() ccRunCombo("KeepSave") Notify("Keep+Save fired", 2) end })
-MobL:AddButton({ Text = "Test Jump+Keep+Save", Func = function() ccRunCombo("JumpKeepSave") Notify("Jump+Keep+Save fired", 2) end })
-MobR:AddSlider("MobBtnSize", { Text = "Button Size", Default = 88, Min = 40, Max = 180, Rounding = 0, Suffix = " px", Callback = function(v) CC.btn.size = v ccSyncSizes() end })
-MobR:AddSlider("MobBtnTrans", { Text = "Button Visibility (Transparency)", Default = 0.12, Min = 0, Max = 1, Rounding = 2, Callback = function(v) CC.btn.transparency = v ccSyncOpacity() end })
-MobR:AddSlider("MobKeepGap", { Text = "Keep → Save Gap", Default = 0.08, Min = 0, Max = 0.5, Rounding = 2, Suffix = "s", Callback = function(v) CC.keepToSave = v end })
-MobR:AddButton({ Text = "Reset Button Positions", Func = function()
+MobL:Toggle({ Title = "Show On-Screen Buttons", Default = true, Callback = function(v) CC.btn.visible = v ccSyncVisible() end })
+MobL:Toggle({ Title = "Lock Buttons (tap = run)", Default = false, Callback = function(v) CC.btn.locked = v ccSyncLock() end })
+MobL:Toggle({ Title = "Enable Macros", Default = true, Callback = function(v) CC.mobEnabled = v end })
+MobL:Button({ Title = "Test Keep+Save", Justify = "Center", Callback = function() ccRunCombo("KeepSave") end })
+MobL:Button({ Title = "Test Jump+Keep+Save", Justify = "Center", Callback = function() ccRunCombo("JumpKeepSave") end })
+MobR:Slider({ Title = "Button Size", Step = 2, Value = { Min = 40, Max = 180, Default = 88 }, Callback = function(v) CC.btn.size = v ccSyncSizes() end })
+MobR:Slider({ Title = "Button Visibility (Transparency)", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.12 }, Callback = function(v) CC.btn.transparency = v ccSyncOpacity() end })
+MobR:Slider({ Title = "Keep → Save Gap", Step = 0.01, Value = { Min = 0, Max = 0.5, Default = 0.08 }, Callback = function(v) CC.keepToSave = v end })
+MobR:Button({ Title = "Reset Button Positions", Justify = "Center", Callback = function()
     for id, pos in pairs(CC_DEFAULT_POS) do
         CC.positions[id] = pos
         if ccRefs[id] and ccRefs[id].btn then ccRefs[id].btn.Position = pos end
     end
-    Notify("Positions reset", 2)
 end })
 
-Library:Notify("🌹 FIVELYSS v2.2.1 loaded", 4)
-task.wait(1.2)
-Library:Notify("Sky tab + Mobile GK buttons fixed", 4)
-task.wait(1.2)
-Library:Notify("RightShift to toggle UI", 4)
+-- ============================================================
+-- MISC (Anti Kick, Cards, Misc utilities)
+-- ============================================================
+local MiscTab = Window:Tab({ Title = "Misc", Icon = "sparkles" })
+local AntiSection = MiscTab:Section({ Title = "Anti Kick" })
+AntiSection:Button({ Title = "Anti Offside", Justify = "Center", Callback = function()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "Offside" or obj.Name == "Offside Check" then
+            pcall(function() obj:Destroy() end)
+        end
+    end
+end })
 
-print("============================================")
-print("  FIVELYSS v2.2.1 — UI FIX")
-print("  Sky icon = sun, Mobile GK icon = mouse-pointer")
-print("  Mobile GK DisplayOrder = max, deferred Enable")
-print("============================================")
+local Dialog = Window:Dialog({
+    Icon = "bird",
+    Title = "Loaded",
+    Content = "WindUI build. Reach 0-10 step 0.1. Mobile GK on-screen buttons available.",
+    Buttons = {
+        { Title = "Continue", Callback = function() print("ok") end }
+    }
+})
+
+WindUI:Notify({
+    Title = "TPS ULTIMATE v2.3 WindUI",
+    Content = "Reach + Limb + Stamina + Mobile GK ready",
+    Duration = 3,
+})
