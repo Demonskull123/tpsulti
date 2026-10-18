@@ -1,154 +1,101 @@
--- lov
-
+-- TPS ULTIMATE v2.7 — Config Save/Load + tuned AutoCatch pull
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
 -- ============================================================
--- CONFIG STORE (declared first, populated by each feature)
+-- CONFIG SYSTEM
 -- ============================================================
-local CONFIG = {}
-local CONFIG_FILE = "TPSULT_Config.json"
-local ConfigTabRef = nil
-local ConfigUI = { List = nil, NameBox = nil }
+local CONFIG_DIR = "TPSULT_v2"
+local CONFIG_FILE = "config.json"
+local Config = {}
+local ConfigCallbacks = {}
 
-local function getExecutor()
-    if syn and syn.writefile then return syn end
-    if fluxus and fluxus.writefile then return fluxus end
-    if writefile and readfile then return { writefile = writefile, readfile = readfile, isfile = isfile, listfiles = listfiles, makefolder = makefolder, isfolder = isfolder } end
-    return nil
+local function ensureDir()
+    if makefolder and isfolder and not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
 end
-
-local EXEC = getExecutor()
 
 local function serialize(v)
     local t = typeof(v)
-    if t == "table" then
-        local parts = {}
-        for k, val in pairs(v) do
-            local key
-            if typeof(k) == "string" then key = string.format("[%q]", k)
-            else key = "[" .. tostring(k) .. "]" end
-            table.insert(parts, key .. "=" .. serialize(val))
-        end
-        return "{" .. table.concat(parts, ",") .. "}"
-    elseif t == "string" then
-        return string.format("%q", v)
-    elseif t == "number" or t == "boolean" then
-        return tostring(v)
-    elseif t == "Vector3" then
-        return string.format("Vector3.new(%0.6f,%0.6f,%0.6f)", v.X, v.Y, v.Z)
-    elseif t == "Color3" then
-        return string.format("Color3.new(%0.6f,%0.6f,%0.6f)", v.R, v.G, v.B)
-    elseif t == "UDim2" then
-        return string.format("UDim2.new(%0.6f,%d,%0.6f,%d)", v.X.Scale, v.X.Offset, v.Y.Scale, v.Y.Offset)
-    elseif t == "EnumItem" then
-        return string.format("Enum.%s.%s", tostring(v.EnumType), v.Name)
-    end
+    if t == "Vector3" then return string.format("V3(%f,%f,%f)", v.X, v.Y, v.Z)
+    elseif t == "Color3" then return string.format("C3(%d,%d,%d)", v.R * 255, v.G * 255, v.B * 255)
+    elseif t == "UDim2" then return string.format("U2(%f,%d,%f,%d)", v.X.Scale, v.X.Offset, v.Y.Scale, v.Y.Offset)
+    elseif t == "string" then return string.format("%q", v)
+    elseif t == "boolean" then return tostring(v)
+    elseif t == "number" then return tostring(v)
+    elseif t == "nil" then return "nil" end
     return "nil"
 end
 
 local function deserialize(s)
-    local fn, err = loadstring("return " .. s, "cfg")
-    if not fn then return nil end
-    local ok, res = pcall(fn)
-    if ok then return res end
-    return nil
+    if s == "nil" or s == nil then return nil end
+    if s == "true" then return true end
+    if s == "false" then return false end
+    local v3x, v3y, v3z = s:match("^V3%(([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)%)$")
+    if v3x then return Vector3.new(tonumber(v3x), tonumber(v3y), tonumber(v3z)) end
+    local c3r, c3g, c3b = s:match("^C3%((%d+),(%d+),(%d+)%)$")
+    if c3r then return Color3.fromRGB(tonumber(c3r), tonumber(c3g), tonumber(c3b)) end
+    local u2xs, u2xo, u2ys, u2yo = s:match("^U2%(([%d%.%-]+),([%d%-]+),([%d%.%-]+),([%d%-]+)%)$")
+    if u2xs then return UDim2.new(tonumber(u2xs), tonumber(u2xo), tonumber(u2ys), tonumber(u2yo)) end
+    local num = tonumber(s)
+    if num then return num end
+    local str = s:match('^"(.*)"$')
+    if str then return str end
+    return s
 end
 
-local function deepCopy(v)
-    if typeof(v) ~= "table" then return v end
-    local out = {}
-    for k, val in pairs(v) do out[k] = deepCopy(val) end
-    return out
-end
-
-local function deepMerge(dst, src)
-    for k, v in pairs(src) do
-        if typeof(v) == "table" and typeof(dst[k]) == "table" then
-            deepMerge(dst[k], v)
-        else
-            dst[k] = v
-        end
+local function saveConfig()
+    ensureDir()
+    local lines = {}
+    for k, v in pairs(Config) do table.insert(lines, string.format('%s=%s', k, serialize(v))) end
+    local data = table.concat(lines, "\n")
+    if writefile then
+        pcall(function() writefile(CONFIG_DIR .. "/" .. CONFIG_FILE, data) end)
+        return true
     end
-end
-
-local ConfigFolder = "TPSULT"
-pcall(function() if EXEC and EXEC.makefolder and not (EXEC.isfolder and EXEC.isfolder(ConfigFolder)) then EXEC.makefolder(ConfigFolder) end end)
-
-local function listConfigs()
-    local names = {}
-    if not EXEC or not EXEC.listfiles then return names end
-    local ok, files = pcall(EXEC.listfiles, ConfigFolder)
-    if not ok or not files then return names end
-    for _, f in ipairs(files) do
-        local name = f:match("([^/\\]+)%.json$")
-        if name then table.insert(names, name) end
-    end
-    table.sort(names)
-    return names
-end
-
-local function saveConfig(name)
-    if not EXEC or not EXEC.writefile then return false, "no executor file io" end
-    name = tostring(name or ""):gsub("[^%w_%-]", "")
-    if name == "" then return false, "bad name" end
-    local path = ConfigFolder .. "/" .. name .. ".json"
-    local ok, err = pcall(EXEC.writefile, path, serialize(CONFIG))
-    if not ok then return false, tostring(err) end
-    return true, path
-end
-
-local function loadConfig(name)
-    if not EXEC or not EXEC.readfile then return false, "no executor file io" end
-    name = tostring(name or ""):gsub("[^%w_%-]", "")
-    local path = ConfigFolder .. "/" .. name .. ".json"
-    if EXEC.isfile and not EXEC.isfile(path) then return false, "not found" end
-    local ok, data = pcall(EXEC.readfile, path)
-    if not ok or not data then return false, "read failed" end
-    local parsed = deserialize(data)
-    if typeof(parsed) ~= "table" then return false, "parse failed" end
-    deepMerge(CONFIG, parsed)
-    return true
-end
-
-local function deleteConfig(name)
-    if not EXEC then return false end
-    name = tostring(name or ""):gsub("[^%w_%-]", "")
-    local path = ConfigFolder .. "/" .. name .. ".json"
-    if EXEC.isfile and not EXEC.isfile(path) then return false end
-    if delfile then pcall(delfile, path) return true end
-    if EXEC.writefile then pcall(EXEC.writefile, path, "") return true end
     return false
 end
 
+local function loadConfig()
+    ensureDir()
+    if not (isfile and readfile) then return false end
+    if not isfile(CONFIG_DIR .. "/" .. CONFIG_FILE) then return false end
+    local ok, data = pcall(function() return readfile(CONFIG_DIR .. "/" .. CONFIG_FILE) end)
+    if not ok or not data or data == "" then return false end
+    for line in data:gmatch("[^\n]+") do
+        local k, v = line:match("^([^=]+)=(.*)$")
+        if k and v then
+            local val = deserialize(v)
+            Config[k] = val
+            if ConfigCallbacks[k] then pcall(ConfigCallbacks[k], val) end
+        end
+    end
+    return true
+end
+
+local function register(key, ctl, default, apply)
+    Config[key] = Config[key] ~= nil and Config[key] or default
+    ConfigCallbacks[key] = function(v)
+        Config[key] = v
+        if apply then pcall(apply, v) end
+        pcall(function() ctl:Set(v) end)
+    end
+end
+local bindCfg = register
+
 -- ============================================================
--- Script cleanup + namecall hook
+-- SCRIPT / ANTICHEAT PURGE
 -- ============================================================
-local scriptsToDelete = {
-    "c-849z-431y",
-    "w-21g-108d",
-    "Script",
-    "f-750u765r",
-    "a-527t-63b"
-}
+local scriptsToDelete = { "c-849z-431y", "w-21g-108d", "Script", "f-750u765r", "a-527t-63b" }
 
 local function deleteHiddenScripts()
     local deletedCount = 0
     for _, obj in pairs(game:GetDescendants()) do
-        if (obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript")) then
+        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
             for _, name in pairs(scriptsToDelete) do
-                if obj.Name == name then
-                    pcall(function()
-                        obj:Destroy()
-                        deletedCount = deletedCount + 1
-                        print("Deleted: " .. obj.Name .. " from " .. tostring(obj.Parent))
-                    end)
-                end
+                if obj.Name == name then pcall(function() obj:Destroy() deletedCount = deletedCount + 1 end) end
             end
         end
     end
@@ -156,24 +103,19 @@ local function deleteHiddenScripts()
         for _, obj in pairs(getnilinstances()) do
             if obj:IsA("LuaSourceContainer") then
                 for _, name in pairs(scriptsToDelete) do
-                    if obj.Name == name then
-                        pcall(function()
-                            obj:Destroy()
-                            deletedCount = deletedCount + 1
-                            print("Deleted nil script: " .. obj.Name)
-                        end)
-                    end
+                    if obj.Name == name then pcall(function() obj:Destroy() deletedCount = deletedCount + 1 end) end
                 end
             end
         end
     end
     return deletedCount
 end
+deleteHiddenScripts()
 
 local oldAC
 oldAC = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
-    if (method == "FireServer" or method == "InvokeServer") then
+    if method == "FireServer" or method == "InvokeServer" then
         local remoteName = tostring(self)
         if remoteName:find("RemoteEventL") or remoteName:find("Anticheat") or
            remoteName:find("Banned") or remoteName:find("Ban") or remoteName:find("Kick") then
@@ -183,161 +125,33 @@ oldAC = hookmetamethod(game, "__namecall", function(self, ...)
     return oldAC(self, ...)
 end)
 
-local blockedBoolValues = { "BannedPlayer", "Ban" }
-
 for _, obj in pairs(game:GetDescendants()) do
-    if obj:IsA("BoolValue") then
-        for _, blocked in pairs(blockedBoolValues) do
-            if obj.Name:find(blocked) then
-                warn("Destroyed BoolValue:", obj.Name)
-                obj:Destroy()
-                break
-            end
-        end
-    end
+    if obj:IsA("BoolValue") and (obj.Name:find("BannedPlayer") or obj.Name:find("Ban")) then obj:Destroy() end
 end
-
 game.DescendantAdded:Connect(function(obj)
-    if obj:IsA("BoolValue") then
-        for _, blocked in pairs(blockedBoolValues) do
-            if obj.Name:find(blocked) then
-                warn("Destroyed new BoolValue:", obj.Name)
-                obj:Destroy()
-                break
-            end
-        end
-    end
-end)
-
-local blockedKeywords = { "exploit", "Banned", "Ban", "Anti", "Detect", "Flag" }
-
-local function checkAndDestroy(script)
-    if script:IsA("LocalScript") or script:IsA("Script") then
-        local scriptName = script.Name
-        local scriptNameLower = scriptName:lower()
-        if scriptName == "" or scriptName:match("^%s*$") then
-            warn("Destroying script with empty/whitespace name:", script:GetFullName())
-            pcall(function() script.Disabled = true script:Destroy() end)
-            return true
-        end
-        for _, keyword in pairs(blockedKeywords) do
-            if scriptNameLower:find(keyword:lower()) then
-                warn("Destroying blocked script:", scriptName, "Path:", script:GetFullName())
-                pcall(function() script.Disabled = true script:Destroy() end)
-                return true
-            end
-        end
-    end
-    return false
-end
-
-for _, descendant in pairs(workspace:GetDescendants()) do checkAndDestroy(descendant) end
-for _, descendant in pairs(player:GetDescendants()) do checkAndDestroy(descendant) end
-workspace.DescendantAdded:Connect(function(d) task.wait() checkAndDestroy(d) end)
-player.DescendantAdded:Connect(function(d) task.wait() checkAndDestroy(d) end)
-
-local character = player.Character or player.CharacterAdded:Wait()
-for _, descendant in pairs(character:GetDescendants()) do checkAndDestroy(descendant) end
-character.DescendantAdded:Connect(function(d) task.wait() checkAndDestroy(d) end)
-player.CharacterAdded:Connect(function(newCharacter)
-    task.wait(1)
-    for _, descendant in pairs(newCharacter:GetDescendants()) do checkAndDestroy(descendant) end
-    newCharacter.DescendantAdded:Connect(function(d) task.wait() checkAndDestroy(d) end)
+    if obj:IsA("BoolValue") and (obj.Name:find("BannedPlayer") or obj.Name:find("Ban")) then obj:Destroy() end
 end)
 
 -- ============================================================
--- UI bootstrap
+-- UI BOOT
 -- ============================================================
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
 
 local Window = WindUI:CreateWindow({
     Title = "TPS ULTIMATE SOCCER X VETA",
     Icon = "rbxassetid://106211849494703",
-    Author = "Made By VETA - Optimized",
+    Author = "Made By VETA - v2.7",
     Folder = "TPSBitch",
-    User = {
-        Enabled = true,
-        Anonymous = false,
-        Callback = function() print("Stop Clicking boi") end,
-    },
+    User = { Enabled = true, Anonymous = false, Callback = function() print("Stop Clicking boi") end },
 })
-
 Window:Tag({ Title = "MOBILE SUPPORTED", Icon = "smartphone", Color = Color3.fromHex("#30ff6a"), Radius = 0 })
 Window:Tag({ Title = "XENO|SOLARA UNSUPPORTED", Icon = "laptop", Color = Color3.fromHex("#FF0000"), Radius = 0 })
 
 -- ============================================================
--- BALL TRACKING (shared)
+-- REACH
 -- ============================================================
-local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head"}
-local TrackedBalls = {}
-local BALL_NAMES = {
-    "TPS", "MPS", "MPSBall", "StreetBall",
-    "PSoccerBall", "SoccerBall", "Ball", "Football",
-    "MatchBall", "fakeBaIlExpIoiter", "fakeBall", "ballPart",
-    "CSF", "VEF", "IFF", "Futbol", "Pelota"
-}
-local BALL_SET = {}
-for _, n in ipairs(BALL_NAMES) do BALL_SET[n] = true end
+local HitboxTab = Window:Tab({ Title = "Reach", Icon = "box" })
 
-local function FindAllBalls()
-    TrackedBalls = {}
-    local tps = Workspace:FindFirstChild("TPSSystem")
-    if tps then
-        local tpsBall = tps:FindFirstChild("TPS")
-        if tpsBall and tpsBall:IsA("BasePart") then table.insert(TrackedBalls, tpsBall) end
-    end
-    local practice = Workspace:FindFirstChild("Practice")
-    if practice then
-        for _, child in ipairs(practice:GetChildren()) do
-            if child:IsA("BasePart") and (child.Name == "PSoccerBall" or child.Name == "Ball") then
-                table.insert(TrackedBalls, child)
-            end
-        end
-    end
-    for _, n in ipairs(BALL_NAMES) do
-        local b = Workspace:FindFirstChild(n)
-        if b and b:IsA("BasePart") and not table.find(TrackedBalls, b) then
-            table.insert(TrackedBalls, b)
-        end
-    end
-end
-
-local function GetMainBall()
-    local tps = Workspace:FindFirstChild("TPSSystem")
-    if tps then
-        local b = tps:FindFirstChild("TPS")
-        if b then return b end
-    end
-    for _, name in ipairs(BALL_NAMES) do
-        local ball = Workspace:FindFirstChild(name)
-        if ball and ball:IsA("BasePart") then return ball end
-    end
-    return nil
-end
-
-local function GetPracticeBalls()
-    local list = {}
-    local practice = Workspace:FindFirstChild("Practice")
-    if practice then
-        for _, child in ipairs(practice:GetChildren()) do
-            if child:IsA("BasePart") and (child.Name == "PSoccerBall" or child.Name == "Ball") then
-                table.insert(list, child)
-            end
-        end
-    end
-    return list
-end
-
-FindAllBalls()
-Workspace.DescendantAdded:Connect(function(c)
-    if c:IsA("BasePart") and BALL_SET[c.Name] and not table.find(TrackedBalls, c) then
-        table.insert(TrackedBalls, c)
-    end
-end)
-
--- ============================================================
--- FIRE TOUCH V1
--- ============================================================
 local FTV1 = { Distance = 2.5, Conn = nil }
 local function FTV1_Hook(limb, ball)
     pcall(function()
@@ -346,12 +160,64 @@ local function FTV1_Hook(limb, ball)
     end)
 end
 
+local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head"}
+local TrackedBalls = {}
+local BALL_NAMES = { "TPS", "MPS", "MPSBall", "StreetBall", "PSoccerBall", "SoccerBall", "Ball",
+    "Football", "MatchBall", "fakeBaIlExpIoiter", "fakeBall", "ballPart", "CSF", "VEF", "IFF", "Futbol", "Pelota" }
+local BALL_SET = {}
+for _, n in ipairs(BALL_NAMES) do BALL_SET[n] = true end
+
+local function FindAllBalls()
+    TrackedBalls = {}
+    local tps = workspace:FindFirstChild("TPSSystem")
+    if tps then
+        local b = tps:FindFirstChild("TPS")
+        if b and b:IsA("BasePart") then table.insert(TrackedBalls, b) end
+    end
+    local practice = workspace:FindFirstChild("Practice")
+    if practice then
+        for _, c in ipairs(practice:GetChildren()) do
+            if c:IsA("BasePart") and (c.Name == "PSoccerBall" or c.Name == "Ball") then table.insert(TrackedBalls, c) end
+        end
+    end
+    for _, n in ipairs(BALL_NAMES) do
+        local b = workspace:FindFirstChild(n)
+        if b and b:IsA("BasePart") and not table.find(TrackedBalls, b) then table.insert(TrackedBalls, b) end
+    end
+end
+
+local function GetMainBall()
+    local tps = workspace:FindFirstChild("TPSSystem")
+    if tps then local b = tps:FindFirstChild("TPS") if b then return b end end
+    for _, name in ipairs(BALL_NAMES) do
+        local b = workspace:FindFirstChild(name)
+        if b and b:IsA("BasePart") then return b end
+    end
+    return nil
+end
+
+local function GetPracticeBalls()
+    local list = {}
+    local practice = workspace:FindFirstChild("Practice")
+    if practice then
+        for _, c in ipairs(practice:GetChildren()) do
+            if c:IsA("BasePart") and (c.Name == "PSoccerBall" or c.Name == "Ball") then table.insert(list, c) end
+        end
+    end
+    return list
+end
+
+FindAllBalls()
+workspace.DescendantAdded:Connect(function(c)
+    if c:IsA("BasePart") and BALL_SET[c.Name] and not table.find(TrackedBalls, c) then table.insert(TrackedBalls, c) end
+end)
+
 local function FTV1_Enable()
     if FTV1.Conn then FTV1.Conn:Disconnect() end
     FTV1.Conn = RunService.Heartbeat:Connect(function()
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not char or not hrp then return end
+        if not hrp then return end
         local hrpPos = hrp.Position
         for _, ball in ipairs(TrackedBalls) do
             if ball and ball.Parent and (hrpPos - ball.Position).Magnitude <= FTV1.Distance then
@@ -365,101 +231,70 @@ local function FTV1_Enable()
 end
 FTV1_Enable()
 
-CONFIG.FTV1 = { Distance = 2.5 }
-CONFIG.HitboxExt = { LeftArmSize = 1, RightArmSize = 1, LeftLegSize = 1, RightLegSize = 1, Fixer = 1, Enabled = false }
-CONFIG.CompReach = { RightLeg = false, LeftLeg = false, Head = false, Arms = false, FTHead = false, FTLegs = false, FTArms = false, Distance = 4 }
-CONFIG.KeybindReach = { Enabled = false, Distance = 6 }
-CONFIG.Reach = {
-    HeadEnabled = false, HeadVisualizer = false, HeadVisTransparency = 0.7,
-    ReachX_Head = 1, ReachY_Head = 1, ReachZ_Head = 1,
-    RightArmEnabled = false, RightArmVisualizer = false, ArmVisTransparency = 0.7,
-    LeftArmEnabled = false, LeftArmVisualizer = false,
-    ReachX_Arm = 1, ReachY_Arm = 1, ReachZ_Arm = 1,
-    RightLegEnabled = false, RightLegVisualizer = false, LegVisTransparency = 0.7,
-    LeftLegEnabled = false, LeftLegVisualizer = false,
-    ReachX_Leg = 1, ReachY_Leg = 1, ReachZ_Leg = 1,
-    ReachDistance = 50,
-}
-CONFIG.NRC = { Enabled = false, Magnitude = 4, Distance = 15 }
-CONFIG.Sky = { Enabled = false, Current = "Default" }
-CONFIG.Time = { Enabled = false, Value = 14 }
-CONFIG.Tools = { Enabled = false, Value = 0.05 }
-CONFIG.AutoCatch = {
-    Enabled = false, Distance = 20, Force = true, Dampen = true,
-    PullStrength = 40, StickyRange = 3.5, StickyHold = 0.9, StopRadius = 1.2,
-}
-CONFIG.Ball = { Size = 5 }
-CONFIG.Mobile = {
-    btnVisible = true, btnLocked = false, btnSize = 88, btnTransparency = 0.12,
-    mobEnabled = true, keepToSave = 0.08,
-}
-
--- ============================================================
--- REACH TAB
--- ============================================================
-local HitboxTab = Window:Tab({ Title = "Reach", Icon = "box" })
 local sFTV1 = HitboxTab:Section({ Title = "FireTouch V1" })
-sFTV1:Slider({ Title = "Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 2.5 }, Callback = function(v) FTV1.Distance = v CONFIG.FTV1.Distance = v end })
-sFTV1:Button({ Title = "Refresh Balls", Justify = "Center", Callback = function() FindAllBalls() WindUI:Notify({Title="Refresh",Content="Found ".. #TrackedBalls .." balls"}) end })
-sFTV1:Button({ Title = "Re-enable FTV1", Justify = "Center", Callback = function() FTV1_Enable() WindUI:Notify({Title="FTV1",Content="Refreshed"}) end })
+local slFTV1 = sFTV1:Slider({ Title = "Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 2.5 }, Callback = function(v) FTV1.Distance = v Config.ftv1_dist = v end })
+bindCfg("ftv1_dist", slFTV1, 2.5, function(v) FTV1.Distance = v end)
+sFTV1:Button({ Title = "Refresh Balls", Justify = "Center", Callback = function() FindAllBalls() WindUI:Notify({ Title = "Refresh", Content = "Found " .. #TrackedBalls .. " balls" }) end })
+sFTV1:Button({ Title = "Re-enable FTV1", Justify = "Center", Callback = function() FTV1_Enable() WindUI:Notify({ Title = "FTV1", Content = "Refreshed" }) end })
 
 local HitboxExt = { LeftArmSize = 1, RightArmSize = 1, LeftLegSize = 1, RightLegSize = 1, Fixer = 1, Enabled = false, Conn = nil, MaxSize = 2 }
 local sHitbox = HitboxTab:Section({ Title = "Hitbox Extender" })
-local function setHitboxSize(key, v) HitboxExt[key] = math.min(v, HitboxExt.MaxSize) CONFIG.HitboxExt[key] = v end
-sHitbox:Slider({ Title = "Left Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) setHitboxSize("LeftArmSize", v) end })
-sHitbox:Slider({ Title = "Right Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) setHitboxSize("RightArmSize", v) end })
-sHitbox:Slider({ Title = "Left Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) setHitboxSize("LeftLegSize", v) end })
-sHitbox:Slider({ Title = "Right Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) setHitboxSize("RightLegSize", v) end })
-sHitbox:Slider({ Title = "Fixer", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.Fixer = v CONFIG.HitboxExt.Fixer = v end })
-
-local function HitboxExt_Start()
-    if HitboxExt.Conn then HitboxExt.Conn:Disconnect() end
-    HitboxExt.Conn = RunService.Heartbeat:Connect(function()
-        if not HitboxExt.Enabled then return end
+local slHA = sHitbox:Slider({ Title = "Left Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.LeftArmSize = v Config.he_la = v end })
+local slHRA = sHitbox:Slider({ Title = "Right Arm Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.RightArmSize = v Config.he_ra = v end })
+local slHL = sHitbox:Slider({ Title = "Left Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.LeftLegSize = v Config.he_ll = v end })
+local slHRL = sHitbox:Slider({ Title = "Right Leg Size", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.RightLegSize = v Config.he_rl = v end })
+local slHF = sHitbox:Slider({ Title = "Fixer", Step = 0.1, Value = { Min = 1, Max = 2, Default = 1 }, Callback = function(v) HitboxExt.Fixer = v Config.he_fix = v end })
+local tgHE = sHitbox:Toggle({ Title = "Enable Hitbox Extender", Default = false, Callback = function(v)
+    HitboxExt.Enabled = v
+    Config.he_en = v
+    if v then
+        if HitboxExt.Conn then HitboxExt.Conn:Disconnect() end
+        HitboxExt.Conn = RunService.Heartbeat:Connect(function()
+            if not HitboxExt.Enabled then return end
+            local char = player.Character
+            if not char then return end
+            local function setLimb(name, size)
+                local p = char:FindFirstChild(name)
+                if p and p:IsA("BasePart") then p.Size = Vector3.new(size, size, size) * HitboxExt.Fixer end
+            end
+            setLimb("Left Arm", HitboxExt.LeftArmSize)
+            setLimb("Right Arm", HitboxExt.RightArmSize)
+            setLimb("Left Leg", HitboxExt.LeftLegSize)
+            setLimb("Right Leg", HitboxExt.RightLegSize)
+        end)
+    else
+        if HitboxExt.Conn then HitboxExt.Conn:Disconnect() HitboxExt.Conn = nil end
         local char = player.Character
-        if not char then return end
-        local function setLimb(name, size)
-            local p = char:FindFirstChild(name)
-            if p and p:IsA("BasePart") then p.Size = Vector3.new(size, size, size) * HitboxExt.Fixer end
-        end
-        setLimb("Left Arm", HitboxExt.LeftArmSize)
-        setLimb("Right Arm", HitboxExt.RightArmSize)
-        setLimb("Left Leg", HitboxExt.LeftLegSize)
-        setLimb("Right Leg", HitboxExt.RightLegSize)
-    end)
-end
-local function HitboxExt_Stop()
-    HitboxExt.Enabled = false
-    if HitboxExt.Conn then HitboxExt.Conn:Disconnect() HitboxExt.Conn = nil end
-    local char = player.Character
-    if char then
-        for _, name in ipairs({"Left Arm","Right Arm","Left Leg","Right Leg"}) do
-            local p = char:FindFirstChild(name)
-            if p then p.Size = Vector3.new(1, 2, 1) end
+        if char then
+            for _, name in ipairs({ "Left Arm", "Right Arm", "Left Leg", "Right Leg" }) do
+                local p = char:FindFirstChild(name)
+                if p then p.Size = Vector3.new(1, 2, 1) end
+            end
         end
     end
-end
-sHitbox:Toggle({ Title = "Enable Hitbox Extender", Default = false, Callback = function(v)
-    HitboxExt.Enabled = v CONFIG.HitboxExt.Enabled = v
-    if v then HitboxExt_Start() else HitboxExt_Stop() end
 end })
+bindCfg("he_la", slHA, 1, function(v) HitboxExt.LeftArmSize = v end)
+bindCfg("he_ra", slHRA, 1, function(v) HitboxExt.RightArmSize = v end)
+bindCfg("he_ll", slHL, 1, function(v) HitboxExt.LeftLegSize = v end)
+bindCfg("he_rl", slHRL, 1, function(v) HitboxExt.RightLegSize = v end)
+bindCfg("he_fix", slHF, 1, function(v) HitboxExt.Fixer = v end)
+bindCfg("he_en", tgHE, false, function(v) HitboxExt.Enabled = v end)
 
 local CompReachCfg = { RightLeg = false, LeftLeg = false, Head = false, Arms = false, FTHead = false, FTLegs = false, FTArms = false, Distance = 4 }
 local sComp = HitboxTab:Section({ Title = "Comp Reach" })
-local function setComp(k, v) CompReachCfg[k] = v CONFIG.CompReach[k] = v end
-sComp:Toggle({ Title = "Right Leg Reach", Default = false, Callback = function(v) setComp("RightLeg", v) end })
-sComp:Toggle({ Title = "Left Leg Reach", Default = false, Callback = function(v) setComp("LeftLeg", v) end })
-sComp:Toggle({ Title = "Head Reach", Default = false, Callback = function(v) setComp("Head", v) end })
-sComp:Toggle({ Title = "Arms Reach", Default = false, Callback = function(v) setComp("Arms", v) end })
-sComp:Toggle({ Title = "FireTouch Head", Default = false, Callback = function(v) setComp("FTHead", v) end })
-sComp:Toggle({ Title = "FireTouch Legs", Default = false, Callback = function(v) setComp("FTLegs", v) end })
-sComp:Toggle({ Title = "FireTouch Arms", Default = false, Callback = function(v) setComp("FTArms", v) end })
-sComp:Slider({ Title = "Comp Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 4 }, Callback = function(v) CompReachCfg.Distance = v CONFIG.CompReach.Distance = v end })
+bindCfg("cr_rl", sComp:Toggle({ Title = "Right Leg Reach", Default = false, Callback = function(v) CompReachCfg.RightLeg = v Config.cr_rl = v end }), false, function(v) CompReachCfg.RightLeg = v end)
+bindCfg("cr_ll", sComp:Toggle({ Title = "Left Leg Reach", Default = false, Callback = function(v) CompReachCfg.LeftLeg = v Config.cr_ll = v end }), false, function(v) CompReachCfg.LeftLeg = v end)
+bindCfg("cr_h",  sComp:Toggle({ Title = "Head Reach", Default = false, Callback = function(v) CompReachCfg.Head = v Config.cr_h = v end }), false, function(v) CompReachCfg.Head = v end)
+bindCfg("cr_a",  sComp:Toggle({ Title = "Arms Reach", Default = false, Callback = function(v) CompReachCfg.Arms = v Config.cr_a = v end }), false, function(v) CompReachCfg.Arms = v end)
+bindCfg("cr_fth", sComp:Toggle({ Title = "FireTouch Head", Default = false, Callback = function(v) CompReachCfg.FTHead = v Config.cr_fth = v end }), false, function(v) CompReachCfg.FTHead = v end)
+bindCfg("cr_ftl", sComp:Toggle({ Title = "FireTouch Legs", Default = false, Callback = function(v) CompReachCfg.FTLegs = v Config.cr_ftl = v end }), false, function(v) CompReachCfg.FTLegs = v end)
+bindCfg("cr_fta", sComp:Toggle({ Title = "FireTouch Arms", Default = false, Callback = function(v) CompReachCfg.FTArms = v Config.cr_fta = v end }), false, function(v) CompReachCfg.FTArms = v end)
+bindCfg("cr_d", sComp:Slider({ Title = "Comp Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 4 }, Callback = function(v) CompReachCfg.Distance = v Config.cr_d = v end }), 4, function(v) CompReachCfg.Distance = v end)
 
 RunService.Heartbeat:Connect(function()
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not char or not root then return end
+    if not root then return end
     local ball = GetMainBall()
     if not ball then return end
     if (root.Position - ball.Position).Magnitude > CompReachCfg.Distance then return end
@@ -475,22 +310,19 @@ end)
 
 local KeybindReach = {
     Enabled = false, Distance = 6,
-    Keybinds = {
-        Shoot = Enum.KeyCode.E, Pass = Enum.KeyCode.Q, Tackle = Enum.KeyCode.F,
+    Keybinds = { Shoot = Enum.KeyCode.E, Pass = Enum.KeyCode.Q, Tackle = Enum.KeyCode.F,
         Dribble = Enum.KeyCode.C, Long = Enum.KeyCode.G, Chip = Enum.KeyCode.V,
-        Header = Enum.KeyCode.H, Volley = Enum.KeyCode.B, Bicycle = Enum.KeyCode.N,
-        FakeShoot = Enum.KeyCode.Z,
-    }
+        Header = Enum.KeyCode.H, Volley = Enum.KeyCode.B, Bicycle = Enum.KeyCode.N, FakeShoot = Enum.KeyCode.Z },
 }
 local sKeybind = HitboxTab:Section({ Title = "Keybind Reach" })
-sKeybind:Toggle({ Title = "Enable Keybind Reach", Default = false, Callback = function(v) KeybindReach.Enabled = v CONFIG.KeybindReach.Enabled = v end })
-sKeybind:Slider({ Title = "Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 6 }, Callback = function(v) KeybindReach.Distance = v CONFIG.KeybindReach.Distance = v end })
+bindCfg("kr_en", sKeybind:Toggle({ Title = "Enable Keybind Reach", Default = false, Callback = function(v) KeybindReach.Enabled = v Config.kr_en = v end }), false, function(v) KeybindReach.Enabled = v end)
+bindCfg("kr_d", sKeybind:Slider({ Title = "Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 6 }, Callback = function(v) KeybindReach.Distance = v Config.kr_d = v end }), 6, function(v) KeybindReach.Distance = v end)
 
 RunService.Heartbeat:Connect(function()
     if not KeybindReach.Enabled then return end
     local char = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not char or not root then return end
+    if not root then return end
     local ball = GetMainBall()
     if not ball then return end
     if (root.Position - ball.Position).Magnitude > KeybindReach.Distance then return end
@@ -509,13 +341,22 @@ end)
 -- LIMB REACH
 -- ============================================================
 local LimbTab = Window:Tab({ Title = "Limb Reach", Icon = "crosshair" })
-local reachSettings = CONFIG.Reach
 
+local reachSettings = {
+    HeadEnabled = false, HeadVisualizer = false, HeadVisTransparency = 0.7,
+    ReachX_Head = 1, ReachY_Head = 1, ReachZ_Head = 1,
+    RightArmEnabled = false, RightArmVisualizer = false, ArmVisTransparency = 0.7,
+    LeftArmEnabled = false, LeftArmVisualizer = false,
+    ReachX_Arm = 1, ReachY_Arm = 1, ReachZ_Arm = 1,
+    RightLegEnabled = false, RightLegVisualizer = false, LegVisTransparency = 0.7,
+    LeftLegEnabled = false, LeftLegVisualizer = false,
+    ReachX_Leg = 1, ReachY_Leg = 1, ReachZ_Leg = 1, ReachDistance = 50,
+}
 local LimbHitboxes = {}
 local LimbVisualizers = {}
 local LimbActiveTouches = {}
 local LIMB_TOUCH_COOLDOWN = 0.1
-local LimbBodyParts = {"Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
+local LimbBodyParts = { "Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg" }
 
 local function SafeClear(tbl)
     if not tbl then return end
@@ -525,43 +366,40 @@ end
 local function GetReachDistanceForPart(partName)
     if partName == "Head" then
         if not reachSettings.HeadEnabled then return 0 end
-        local avg = (reachSettings.ReachX_Head + reachSettings.ReachY_Head + reachSettings.ReachZ_Head) / 3
-        return reachSettings.ReachDistance * avg
+        return reachSettings.ReachDistance * ((reachSettings.ReachX_Head + reachSettings.ReachY_Head + reachSettings.ReachZ_Head) / 3)
     elseif partName == "Right Arm" or partName == "Left Arm" then
         local side = partName:match("(%w+)%s")
         if not reachSettings[side .. "ArmEnabled"] then return 0 end
-        local avg = (reachSettings.ReachX_Arm + reachSettings.ReachY_Arm + reachSettings.ReachZ_Arm) / 3
-        return reachSettings.ReachDistance * avg
+        return reachSettings.ReachDistance * ((reachSettings.ReachX_Arm + reachSettings.ReachY_Arm + reachSettings.ReachZ_Arm) / 3)
     elseif partName == "Right Leg" or partName == "Left Leg" then
         local side = partName:match("(%w+)%s")
         if not reachSettings[side .. "LegEnabled"] then return 0 end
-        local avg = (reachSettings.ReachX_Leg + reachSettings.ReachY_Leg + reachSettings.ReachZ_Leg) / 3
-        return reachSettings.ReachDistance * avg
+        return reachSettings.ReachDistance * ((reachSettings.ReachX_Leg + reachSettings.ReachY_Leg + reachSettings.ReachZ_Leg) / 3)
     end
     return 0
 end
 
 local function CreateLimbHitbox(bodyPart, partName)
-    local hitbox = Instance.new("Part")
-    hitbox.Name = partName .. "_Hitbox"
-    hitbox.Anchored = false
-    hitbox.CanCollide = false
-    hitbox.Transparency = 1
-    hitbox.Massless = true
+    local hb = Instance.new("Part")
+    hb.Name = partName .. "_Hitbox"
+    hb.Anchored = false
+    hb.CanCollide = false
+    hb.Transparency = 1
+    hb.Massless = true
     if partName == "Head" then
-        hitbox.Size = Vector3.new(bodyPart.Size.X*reachSettings.ReachX_Head*2, bodyPart.Size.Y*reachSettings.ReachY_Head*2, bodyPart.Size.Z*reachSettings.ReachZ_Head*2)
+        hb.Size = Vector3.new(bodyPart.Size.X * reachSettings.ReachX_Head * 2, bodyPart.Size.Y * reachSettings.ReachY_Head * 2, bodyPart.Size.Z * reachSettings.ReachZ_Head * 2)
     elseif partName == "Right Arm" or partName == "Left Arm" then
-        hitbox.Size = Vector3.new(bodyPart.Size.X*reachSettings.ReachX_Arm*2, bodyPart.Size.Y*reachSettings.ReachY_Arm*2, bodyPart.Size.Z*reachSettings.ReachZ_Arm*2)
+        hb.Size = Vector3.new(bodyPart.Size.X * reachSettings.ReachX_Arm * 2, bodyPart.Size.Y * reachSettings.ReachY_Arm * 2, bodyPart.Size.Z * reachSettings.ReachZ_Arm * 2)
     else
-        hitbox.Size = Vector3.new(bodyPart.Size.X*reachSettings.ReachX_Leg*2, bodyPart.Size.Y*reachSettings.ReachY_Leg*2, bodyPart.Size.Z*reachSettings.ReachZ_Leg*2)
+        hb.Size = Vector3.new(bodyPart.Size.X * reachSettings.ReachX_Leg * 2, bodyPart.Size.Y * reachSettings.ReachY_Leg * 2, bodyPart.Size.Z * reachSettings.ReachZ_Leg * 2)
     end
-    hitbox.CFrame = bodyPart.CFrame
-    hitbox.Parent = bodyPart
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = bodyPart
-    weld.Part1 = hitbox
-    weld.Parent = hitbox
-    return hitbox
+    hb.CFrame = bodyPart.CFrame
+    hb.Parent = bodyPart
+    local w = Instance.new("WeldConstraint")
+    w.Part0 = bodyPart
+    w.Part1 = hb
+    w.Parent = hb
+    return hb
 end
 
 local function GetVisTransparencyFor(partName)
@@ -590,20 +428,20 @@ local function UpdateLimbVisualizer(partName)
     elseif partName == "Left Leg" then visOn = reachSettings.LeftLegVisualizer end
     if LimbVisualizers[partName] then LimbVisualizers[partName]:Destroy() LimbVisualizers[partName] = nil end
     if visOn and LimbHitboxes[partName] then
-        local hitbox = LimbHitboxes[partName]
+        local hb = LimbHitboxes[partName]
         local vis = Instance.new("Part")
         vis.Name = partName .. "_Visualizer"
-        vis.Size = hitbox.Size
-        vis.CFrame = hitbox.CFrame
+        vis.Size = hb.Size
+        vis.CFrame = hb.CFrame
         vis.Anchored = false
         vis.CanCollide = false
         vis.Transparency = GetVisTransparencyFor(partName)
         vis.Color = Color3.fromRGB(0, 255, 100)
         vis.Material = Enum.Material.Neon
         vis.Massless = true
-        vis.Parent = hitbox
+        vis.Parent = hb
         local w = Instance.new("WeldConstraint")
-        w.Part0 = hitbox
+        w.Part0 = hb
         w.Part1 = vis
         w.Parent = vis
         LimbVisualizers[partName] = vis
@@ -618,10 +456,10 @@ end
 
 local function FindBallPartLimb(part)
     if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall" or BALL_SET[part.Name]) then return part end
-    local current = part
-    while current and current ~= Workspace do
-        if current:IsA("BasePart") and (current.Name == "PSoccerBall" or current.Name == "TPS" or BALL_SET[current.Name]) then return current end
-        current = current.Parent
+    local cur = part
+    while cur and cur ~= Workspace do
+        if cur:IsA("BasePart") and (cur.Name == "PSoccerBall" or cur.Name == "TPS" or BALL_SET[cur.Name]) then return cur end
+        cur = cur.Parent
     end
     return nil
 end
@@ -650,23 +488,23 @@ end
 local function CheckLimbBallCollisions()
     local char = player.Character
     if not char or not char.Parent then return end
-    local currentTime = tick()
+    local now = tick()
     local newTouches = {}
-    for partName, hitbox in pairs(LimbHitboxes) do
-        if hitbox and hitbox.Parent then
+    for partName, hb in pairs(LimbHitboxes) do
+        if hb and hb.Parent then
             local bodyPart = char:FindFirstChild(partName)
             if bodyPart then
                 local op = OverlapParams.new()
-                op.FilterDescendantsInstances = {char}
+                op.FilterDescendantsInstances = { char }
                 op.FilterType = Enum.RaycastFilterType.Exclude
-                local partsInBox = Workspace:GetPartBoundsInBox(hitbox.CFrame, hitbox.Size, op)
+                local partsInBox = Workspace:GetPartBoundsInBox(hb.CFrame, hb.Size, op)
                 for _, part in ipairs(partsInBox) do
                     local ballPart = FindBallPartLimb(part)
                     if ballPart then
                         local key = partName .. ":" .. ballPart:GetFullName()
-                        newTouches[key] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
-                        if not LimbActiveTouches[key] or (currentTime - LimbActiveTouches[key].time) > LIMB_TOUCH_COOLDOWN then
-                            LimbActiveTouches[key] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
+                        newTouches[key] = { part = ballPart, bodyPart = bodyPart, time = now }
+                        if not LimbActiveTouches[key] or (now - LimbActiveTouches[key].time) > LIMB_TOUCH_COOLDOWN then
+                            LimbActiveTouches[key] = { part = ballPart, bodyPart = bodyPart, time = now }
                             pcall(function()
                                 firetouchinterest(ballPart, bodyPart, 0)
                                 task.wait()
@@ -679,12 +517,11 @@ local function CheckLimbBallCollisions()
         end
     end
     for key, d in pairs(LimbActiveTouches) do
-        if not newTouches[key] and (currentTime - d.time) > LIMB_TOUCH_COOLDOWN then LimbActiveTouches[key] = nil end
+        if not newTouches[key] and (now - d.time) > LIMB_TOUCH_COOLDOWN then LimbActiveTouches[key] = nil end
     end
 end
 
 pcall(CreateAllLimbHitboxes)
-
 local limbLastUpdate = 0
 RunService.Heartbeat:Connect(function()
     local now = tick()
@@ -693,7 +530,6 @@ RunService.Heartbeat:Connect(function()
         pcall(CheckLimbBallCollisions)
     end
 end)
-
 player.CharacterAdded:Connect(function()
     RemoveAllLimbHitboxes()
     task.wait(2)
@@ -701,31 +537,31 @@ player.CharacterAdded:Connect(function()
 end)
 
 local lrL = LimbTab:Section({ Title = "Limb Hitbox Reach" })
-lrL:Toggle({ Title = "Enable Head Reach", Default = false, Callback = function(v) reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head") end })
-lrL:Slider({ Title = "Head X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end })
-lrL:Slider({ Title = "Head Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end })
-lrL:Slider({ Title = "Head Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end })
-lrL:Toggle({ Title = "Enable Right Arm", Default = false, Callback = function(v) reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm") end })
-lrL:Toggle({ Title = "Enable Left Arm", Default = false, Callback = function(v) reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm") end })
-lrL:Slider({ Title = "Arm X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-lrL:Slider({ Title = "Arm Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-lrL:Slider({ Title = "Arm Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end })
-lrL:Toggle({ Title = "Enable Right Leg", Default = false, Callback = function(v) reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg") end })
-lrL:Toggle({ Title = "Enable Left Leg", Default = false, Callback = function(v) reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg") end })
-lrL:Slider({ Title = "Leg X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-lrL:Slider({ Title = "Leg Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
-lrL:Slider({ Title = "Leg Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end })
+bindCfg("lh_head_en", lrL:Toggle({ Title = "Enable Head Reach", Default = false, Callback = function(v) reachSettings.HeadEnabled = v Config.lh_head_en = v UpdateLimbVisualizer("Head") end }), false, function(v) reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head") end)
+bindCfg("lh_hx", lrL:Slider({ Title = "Head X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Head = v Config.lh_hx = v UpdateLimbVisualizer("Head") end }), 1, function(v) reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head") end)
+bindCfg("lh_hy", lrL:Slider({ Title = "Head Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Head = v Config.lh_hy = v UpdateLimbVisualizer("Head") end }), 1, function(v) reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head") end)
+bindCfg("lh_hz", lrL:Slider({ Title = "Head Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Head = v Config.lh_hz = v UpdateLimbVisualizer("Head") end }), 1, function(v) reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head") end)
+bindCfg("lh_ra_en", lrL:Toggle({ Title = "Enable Right Arm", Default = false, Callback = function(v) reachSettings.RightArmEnabled = v Config.lh_ra_en = v UpdateLimbVisualizer("Right Arm") end }), false, function(v) reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm") end)
+bindCfg("lh_la_en", lrL:Toggle({ Title = "Enable Left Arm", Default = false, Callback = function(v) reachSettings.LeftArmEnabled = v Config.lh_la_en = v UpdateLimbVisualizer("Left Arm") end }), false, function(v) reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm") end)
+bindCfg("lh_ax", lrL:Slider({ Title = "Arm X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Arm = v Config.lh_ax = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end }), 1, function(v) reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end)
+bindCfg("lh_ay", lrL:Slider({ Title = "Arm Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Arm = v Config.lh_ay = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end }), 1, function(v) reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end)
+bindCfg("lh_az", lrL:Slider({ Title = "Arm Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Arm = v Config.lh_az = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end }), 1, function(v) reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm") end)
+bindCfg("lh_rl_en", lrL:Toggle({ Title = "Enable Right Leg", Default = false, Callback = function(v) reachSettings.RightLegEnabled = v Config.lh_rl_en = v UpdateLimbVisualizer("Right Leg") end }), false, function(v) reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg") end)
+bindCfg("lh_ll_en", lrL:Toggle({ Title = "Enable Left Leg", Default = false, Callback = function(v) reachSettings.LeftLegEnabled = v Config.lh_ll_en = v UpdateLimbVisualizer("Left Leg") end }), false, function(v) reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg") end)
+bindCfg("lh_lx", lrL:Slider({ Title = "Leg X Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachX_Leg = v Config.lh_lx = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end }), 1, function(v) reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end)
+bindCfg("lh_ly", lrL:Slider({ Title = "Leg Y Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachY_Leg = v Config.lh_ly = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end }), 1, function(v) reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end)
+bindCfg("lh_lz", lrL:Slider({ Title = "Leg Z Size", Step = 0.1, Value = { Min = 0, Max = 10, Default = 1 }, Callback = function(v) reachSettings.ReachZ_Leg = v Config.lh_lz = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end }), 1, function(v) reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg") end)
 
 local lrR = LimbTab:Section({ Title = "Limb Visualizers" })
-lrR:Toggle({ Title = "Head Visualizer", Default = false, Callback = function(v) reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head") end })
-lrR:Slider({ Title = "Head Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end })
-lrR:Toggle({ Title = "Right Arm Visualizer", Default = false, Callback = function(v) reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm") end })
-lrR:Toggle({ Title = "Left Arm Visualizer", Default = false, Callback = function(v) reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm") end })
-lrR:Slider({ Title = "Arm Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end })
-lrR:Toggle({ Title = "Right Leg Visualizer", Default = false, Callback = function(v) reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg") end })
-lrR:Toggle({ Title = "Left Leg Visualizer", Default = false, Callback = function(v) reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg") end })
-lrR:Slider({ Title = "Leg Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end })
-lrR:Button({ Title = "Refresh All Limb Hitboxes", Justify = "Center", Callback = function() RemoveAllLimbHitboxes() CreateAllLimbHitboxes() WindUI:Notify({Title="Limb",Content="Refreshed"}) end })
+bindCfg("lv_h", lrR:Toggle({ Title = "Head Visualizer", Default = false, Callback = function(v) reachSettings.HeadVisualizer = v Config.lv_h = v UpdateLimbVisualizer("Head") end }), false, function(v) reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head") end)
+bindCfg("lv_ht", lrR:Slider({ Title = "Head Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.HeadVisTransparency = v Config.lv_ht = v RefreshVisTransparency() end }), 0.7, function(v) reachSettings.HeadVisTransparency = v RefreshVisTransparency() end)
+bindCfg("lv_ra", lrR:Toggle({ Title = "Right Arm Visualizer", Default = false, Callback = function(v) reachSettings.RightArmVisualizer = v Config.lv_ra = v UpdateLimbVisualizer("Right Arm") end }), false, function(v) reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm") end)
+bindCfg("lv_la", lrR:Toggle({ Title = "Left Arm Visualizer", Default = false, Callback = function(v) reachSettings.LeftArmVisualizer = v Config.lv_la = v UpdateLimbVisualizer("Left Arm") end }), false, function(v) reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm") end)
+bindCfg("lv_at", lrR:Slider({ Title = "Arm Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.ArmVisTransparency = v Config.lv_at = v RefreshVisTransparency() end }), 0.7, function(v) reachSettings.ArmVisTransparency = v RefreshVisTransparency() end)
+bindCfg("lv_rl", lrR:Toggle({ Title = "Right Leg Visualizer", Default = false, Callback = function(v) reachSettings.RightLegVisualizer = v Config.lv_rl = v UpdateLimbVisualizer("Right Leg") end }), false, function(v) reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg") end)
+bindCfg("lv_ll", lrR:Toggle({ Title = "Left Leg Visualizer", Default = false, Callback = function(v) reachSettings.LeftLegVisualizer = v Config.lv_ll = v UpdateLimbVisualizer("Left Leg") end }), false, function(v) reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg") end)
+bindCfg("lv_lt", lrR:Slider({ Title = "Leg Vis Transparency", Step = 0.05, Value = { Min = 0, Max = 1, Default = 0.7 }, Callback = function(v) reachSettings.LegVisTransparency = v Config.lv_lt = v RefreshVisTransparency() end }), 0.7, function(v) reachSettings.LegVisTransparency = v RefreshVisTransparency() end)
+lrR:Button({ Title = "Refresh All Limb Hitboxes", Justify = "Center", Callback = function() RemoveAllLimbHitboxes() CreateAllLimbHitboxes() WindUI:Notify({ Title = "Limb", Content = "Refreshed" }) end })
 lrR:Button({ Title = "Disable All Limb Reach", Justify = "Center", Callback = function()
     reachSettings.HeadEnabled = false
     reachSettings.RightArmEnabled = false
@@ -733,16 +569,16 @@ lrR:Button({ Title = "Disable All Limb Reach", Justify = "Center", Callback = fu
     reachSettings.RightLegEnabled = false
     reachSettings.LeftLegEnabled = false
     RemoveAllLimbHitboxes()
-    WindUI:Notify({Title="Limb",Content="All OFF"})
+    WindUI:Notify({ Title = "Limb", Content = "All OFF" })
 end })
 
 -- ============================================================
--- BOOST
+-- BOOSTS
 -- ============================================================
 local BoostTab = Window:Tab({ Title = "Boost", Icon = "zap" })
 local function FireBoost(id, skill)
     pcall(function()
-        local remote = Workspace:FindFirstChild("FE") and Workspace.FE:FindFirstChild("PlayerCard") and Workspace.FE.PlayerCard:FindFirstChild("Boost")
+        local remote = workspace:FindFirstChild("FE") and workspace.FE:FindFirstChild("PlayerCard") and workspace.FE.PlayerCard:FindFirstChild("Boost")
         if remote then remote:FireServer(id, skill, false) end
     end)
 end
@@ -755,7 +591,6 @@ sBoost:Button({ Title = "Tackle Power", Justify = "Center", Callback = function(
 sBoost:Button({ Title = "Skill Power", Justify = "Center", Callback = function() FireBoost(1409659832, "SkillE") end })
 sBoost:Button({ Title = "GK Power", Justify = "Center", Callback = function() FireBoost(1629744027, "SkillF") end })
 sBoost:Button({ Title = "Durability", Justify = "Center", Callback = function() FireBoost(4579283817, "SkillH") end })
-
 local sCards = BoostTab:Section({ Title = "Cards" })
 sCards:Button({ Title = "Legendary Card", Justify = "Center", Callback = function() FireBoost(14419698867, "Card") end })
 sCards:Button({ Title = "Bronze Card", Justify = "Center", Callback = function() FireBoost(14419693337, "Card") end })
@@ -763,11 +598,11 @@ sCards:Button({ Title = "Silver Card", Justify = "Center", Callback = function()
 
 local sStam = BoostTab:Section({ Title = "Unlimited Stamina" })
 local InfStamEnabled = false
-sStam:Toggle({
-    Title = "Enable Unlimited Stamina",
-    Default = false,
+bindCfg("inf_stam", sStam:Toggle({
+    Title = "Enable Unlimited Stamina", Default = false,
     Callback = function(v)
         InfStamEnabled = v
+        Config.inf_stam = v
         if v == true then
             local mt = getrawmetatable(game)
             setreadonly(mt, false)
@@ -775,47 +610,39 @@ sStam:Toggle({
             local intercepted, disabled, returns = {}, {}, {}
             local namecallMethod = getnamecallmethod or get_namecall_method
             local methods = { RemoteEvent = "FireServer", RemoteFunction = "InvokeServer", BindableEvent = "Fire", BindableFunction = "Invoke" }
-
-            getgenv().InterceptRemoteArgs = function(eventOrFunc, args) intercepted[eventOrFunc] = args end
-            getgenv().SpoofReturn = function(func, newReturn) returns[func] = newReturn end
-            getgenv().DisableRemote = function(eventOrFunc) disabled[eventOrFunc] = true end
-            getgenv().EnableRemote = function(eventOrFunc) disabled[eventOrFunc] = false end
-            getgenv().DisableNebulaRemoteAbuseAPI = function()
-                disabled = {} returns = {} intercepted = {}
-                mt.__namecall = old_namecall
-            end
-
+            getgenv().InterceptRemoteArgs = function(e, a) intercepted[e] = a end
+            getgenv().SpoofReturn = function(f, r) returns[f] = r end
+            getgenv().DisableRemote = function(e) disabled[e] = true end
+            getgenv().EnableRemote = function(e) disabled[e] = false end
+            getgenv().DisableNebulaRemoteAbuseAPI = function() disabled = {} returns = {} intercepted = {} mt.__namecall = old_namecall end
             mt.__namecall = newcclosure(function(self, ...)
                 if InfStamEnabled == false then return old_namecall(self, ...) end
-                local args = {...}
+                local args = { ... }
                 local event = namecallMethod()
                 if methods[self.ClassName] == event then
                     if disabled[self] then return
                     elseif intercepted[self] then
-                        local intercept = intercepted[self]
-                        if typeof(intercept) == "function" then args = {intercept(unpack(args))}
-                        elseif typeof(intercept) == "table" then args = intercept end
+                        local ic = intercepted[self]
+                        if typeof(ic) == "function" then args = { ic(unpack(args)) }
+                        elseif typeof(ic) == "table" then args = ic end
                     end
                 end
-                local returned = {old_namecall(self, unpack(args))}
-                if returns[self] and returned then returned = {returns[self](unpack(returned))} end
+                local returned = { old_namecall(self, unpack(args)) }
+                if returns[self] and returned then returned = { returns[self](unpack(returned)) } end
                 return unpack(returned)
             end)
-
             local old_index = mt.__index
             mt.__index = function(o, k)
                 if tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then return 16 end
                 return old_index(o, k)
             end
             setreadonly(mt, true)
-
             local character = player.Character or player.CharacterAdded:Wait()
             local humanoid = character:WaitForChild("Humanoid")
-
-            if ReplicatedStorage:FindFirstChild("FE") and ReplicatedStorage.FE:FindFirstChild("Sprint") then
-                InterceptRemoteArgs(ReplicatedStorage.FE.Sprint, function() return "Ended" end)
+            local RS = game:GetService("ReplicatedStorage")
+            if RS:FindFirstChild("FE") and RS.FE:FindFirstChild("Sprint") then
+                InterceptRemoteArgs(RS.FE.Sprint, function() return "Ended" end)
             end
-
             humanoid.WalkSpeed = 22
             local mouse = player:GetMouse()
             mouse.KeyDown:Connect(function(key)
@@ -826,19 +653,18 @@ sStam:Toggle({
                 if InfStamEnabled == false then return end
                 humanoid.WalkSpeed = 22
             end)
-
-            local pointsGui = player.PlayerGui:FindFirstChild("Start")
-            if pointsGui and pointsGui:FindFirstChild("Points") then
-                local instantStam = pointsGui.Points:FindFirstChild("InstantStamina")
-                if instantStam then instantStam.Text = "lov active" end
+            local pg = player.PlayerGui:FindFirstChild("Start")
+            if pg and pg:FindFirstChild("Points") then
+                local is = pg.Points:FindFirstChild("InstantStamina")
+                if is then is.Text = "lov active" end
             end
             WindUI:Notify({ Title = "Infinite Stamina", Content = "Infinite Stamina activated!" })
         end
     end
-})
+}), false, function(v) InfStamEnabled = v end)
 
 -- ============================================================
--- REACT
+-- REACTS
 -- ============================================================
 local ReactTab = Window:Tab({ Title = "Reacts", Icon = "star" })
 local ReactsSection = ReactTab:Section({ Title = "Reacts" })
@@ -857,15 +683,16 @@ ReactsSection:Button({ Title = "Break React", Justify = "Center", Callback = fun
 ReactsSection:Button({ Title = "Defence React", Justify = "Center", Callback = function() FireUniversalReact(6) end })
 ReactsSection:Button({ Title = "Prztxl React", Justify = "Center", Callback = function()
     pcall(function()
-        local t = Workspace.TPSSystem and Workspace.TPSSystem:FindFirstChild("TPS")
+        local t = workspace.TPSSystem and workspace.TPSSystem:FindFirstChild("TPS")
         if t then t.AssemblyLinearVelocity = Vector3.new(2.5, 2.5, 2.5) end
     end)
 end })
 
 local NRC = { Enabled = false, Magnitude = 4, Distance = 15, Conn = nil }
 local sNRC = ReactTab:Section({ Title = "No React Decline" })
-sNRC:Toggle({ Title = "Enable NRC", Default = false, Callback = function(v)
-    NRC.Enabled = v CONFIG.NRC.Enabled = v
+bindCfg("nrc_en", sNRC:Toggle({ Title = "Enable NRC", Default = false, Callback = function(v)
+    NRC.Enabled = v
+    Config.nrc_en = v
     if v then
         if NRC.Conn then NRC.Conn:Disconnect() end
         NRC.Conn = RunService.Heartbeat:Connect(function()
@@ -881,9 +708,9 @@ sNRC:Toggle({ Title = "Enable NRC", Default = false, Callback = function(v)
     else
         if NRC.Conn then NRC.Conn:Disconnect() NRC.Conn = nil end
     end
-end })
-sNRC:Slider({ Title = "Magnitude", Step = 1, Value = { Min = 1, Max = 20, Default = 4 }, Callback = function(v) NRC.Magnitude = v CONFIG.NRC.Magnitude = v end })
-sNRC:Slider({ Title = "Distance", Step = 1, Value = { Min = 1, Max = 50, Default = 15 }, Callback = function(v) NRC.Distance = v CONFIG.NRC.Distance = v end })
+end }), false, function(v) NRC.Enabled = v end)
+bindCfg("nrc_mag", sNRC:Slider({ Title = "Magnitude", Step = 1, Value = { Min = 1, Max = 20, Default = 4 }, Callback = function(v) NRC.Magnitude = v Config.nrc_mag = v end }), 4, function(v) NRC.Magnitude = v end)
+bindCfg("nrc_dist", sNRC:Slider({ Title = "Distance", Step = 1, Value = { Min = 1, Max = 50, Default = 15 }, Callback = function(v) NRC.Distance = v Config.nrc_dist = v end }), 15, function(v) NRC.Distance = v end)
 
 -- ============================================================
 -- SKY
@@ -891,15 +718,11 @@ sNRC:Slider({ Title = "Distance", Step = 1, Value = { Min = 1, Max = 50, Default
 local SkyTab = Window:Tab({ Title = "Sky", Icon = "cloud-sun" })
 local SkyL = SkyTab:Section({ Title = "Skybox (Local)" })
 local TimeL = SkyTab:Section({ Title = "Time / Ambient" })
-local SkyLighting = Lighting
+local SkyLighting = game:GetService("Lighting")
 local SkyboxCfg = { Enabled = false, Current = "Default", OriginalSky = nil, OriginalSkyParent = nil }
 pcall(function()
     local sky = SkyLighting:FindFirstChildOfClass("Sky")
-    if not sky then
-        for _, c in ipairs(SkyLighting:GetDescendants()) do
-            if c:IsA("Sky") then sky = c break end
-        end
-    end
+    if not sky then for _, c in ipairs(SkyLighting:GetDescendants()) do if c:IsA("Sky") then sky = c break end end end
     if sky then SkyboxCfg.OriginalSky = sky SkyboxCfg.OriginalSkyParent = sky.Parent end
 end)
 local SKYBOX_PRESETS = {
@@ -915,10 +738,7 @@ local SKY_LIST = {}
 for k in pairs(SKYBOX_PRESETS) do table.insert(SKY_LIST, k) end
 table.sort(SKY_LIST)
 local function RemoveCustomSky()
-    pcall(function()
-        local ex = SkyLighting:FindFirstChild("VETA_Sky")
-        if ex then ex:Destroy() end
-    end)
+    pcall(function() local ex = SkyLighting:FindFirstChild("VETA_Sky") if ex then ex:Destroy() end end)
 end
 local function ApplySkybox(name)
     if not SkyboxCfg.Enabled then return end
@@ -936,17 +756,19 @@ local function ApplySkybox(name)
         sky.Parent = SkyLighting
     end)
 end
-SkyL:Dropdown({ Title = "Skybox Preset", Values = SKY_LIST, Default = "Default", Callback = function(v) SkyboxCfg.Current = v CONFIG.Sky.Current = v if SkyboxCfg.Enabled then ApplySkybox(v) end end })
-SkyL:Toggle({ Title = "Enable Custom Skybox", Default = false, Callback = function(v)
-    SkyboxCfg.Enabled = v CONFIG.Sky.Enabled = v
+local ddSky = SkyL:Dropdown({ Title = "Skybox Preset", Values = SKY_LIST, Default = "Default", Callback = function(v) SkyboxCfg.Current = v Config.sky_preset = v if SkyboxCfg.Enabled then ApplySkybox(v) end end })
+bindCfg("sky_preset", ddSky, "Default", function(v) SkyboxCfg.Current = v if SkyboxCfg.Enabled then ApplySkybox(v) end end)
+bindCfg("sky_en", SkyL:Toggle({ Title = "Enable Custom Skybox", Default = false, Callback = function(v)
+    SkyboxCfg.Enabled = v
+    Config.sky_en = v
     if v then ApplySkybox(SkyboxCfg.Current)
     else RemoveCustomSky() if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or SkyLighting end end
-end })
+end }), false, function(v) SkyboxCfg.Enabled = v if v then ApplySkybox(SkyboxCfg.Current) else RemoveCustomSky() end end)
 SkyL:Button({ Title = "Next Skybox", Justify = "Center", Callback = function()
     local idx = table.find(SKY_LIST, SkyboxCfg.Current) or 1
     local n = idx + 1 if n > #SKY_LIST then n = 1 end
     SkyboxCfg.Current = SKY_LIST[n]
-    CONFIG.Sky.Current = SkyboxCfg.Current
+    Config.sky_preset = SkyboxCfg.Current
     if SkyboxCfg.Enabled then ApplySkybox(SkyboxCfg.Current) end
 end })
 SkyL:Button({ Title = "Reset Skybox", Justify = "Center", Callback = function()
@@ -955,9 +777,10 @@ SkyL:Button({ Title = "Reset Skybox", Justify = "Center", Callback = function()
 end })
 local TimeCfg = { Enabled = false, Value = 14 }
 local TimeLockConn = nil
-TimeL:Slider({ Title = "Clock Time (hours)", Step = 1, Value = { Min = 0, Max = 24, Default = 14 }, Callback = function(v) TimeCfg.Value = v CONFIG.Time.Value = v if TimeCfg.Enabled then SkyLighting.ClockTime = v end end })
-TimeL:Toggle({ Title = "Lock Clock Time", Default = false, Callback = function(v)
-    TimeCfg.Enabled = v CONFIG.Time.Enabled = v
+bindCfg("time_v", TimeL:Slider({ Title = "Clock Time (hours)", Step = 1, Value = { Min = 0, Max = 24, Default = 14 }, Callback = function(v) TimeCfg.Value = v Config.time_v = v if TimeCfg.Enabled then SkyLighting.ClockTime = v end end }), 14, function(v) TimeCfg.Value = v if TimeCfg.Enabled then SkyLighting.ClockTime = v end end)
+bindCfg("time_en", TimeL:Toggle({ Title = "Lock Clock Time", Default = false, Callback = function(v)
+    TimeCfg.Enabled = v
+    Config.time_en = v
     if TimeLockConn then TimeLockConn:Disconnect() TimeLockConn = nil end
     if v then
         SkyLighting.ClockTime = TimeCfg.Value
@@ -966,18 +789,19 @@ TimeL:Toggle({ Title = "Lock Clock Time", Default = false, Callback = function(v
             if math.abs(SkyLighting.ClockTime - TimeCfg.Value) > 0.05 then SkyLighting.ClockTime = TimeCfg.Value end
         end)
     end
-end })
-TimeL:Button({ Title = "Bright Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(150,150,150) SkyLighting.OutdoorAmbient = Color3.fromRGB(150,150,150) end })
-TimeL:Button({ Title = "Dark Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(20,20,20) SkyLighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
+end }), false, function(v) TimeCfg.Enabled = v if v then SkyLighting.ClockTime = TimeCfg.Value end end)
+TimeL:Button({ Title = "Bright Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(150, 150, 150) SkyLighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150) end })
+TimeL:Button({ Title = "Dark Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(20, 20, 20) SkyLighting.OutdoorAmbient = Color3.fromRGB(20, 20, 20) end })
 
 -- ============================================================
--- TOOLS + AUTO CATCH (rewritten: predictive intercept, velocity kill on contact, no near-range pushback)
+-- TOOLS + AUTO CATCH
 -- ============================================================
 local ToolTab = Window:Tab({ Title = "Tools", Icon = "wrench" })
 local ToolCooldown = { Enabled = false, Value = 0.05, Conn = nil }
 local sTools = ToolTab:Section({ Title = "Tools" })
-sTools:Toggle({ Title = "No Tool Cooldown", Default = false, Callback = function(v)
-    ToolCooldown.Enabled = v CONFIG.Tools.Enabled = v
+bindCfg("tc_en", sTools:Toggle({ Title = "No Tool Cooldown", Default = false, Callback = function(v)
+    ToolCooldown.Enabled = v
+    Config.tc_en = v
     if v then
         if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() end
         ToolCooldown.Conn = RunService.Heartbeat:Connect(function()
@@ -991,77 +815,40 @@ sTools:Toggle({ Title = "No Tool Cooldown", Default = false, Callback = function
     else
         if ToolCooldown.Conn then ToolCooldown.Conn:Disconnect() ToolCooldown.Conn = nil end
     end
-end })
-sTools:Slider({ Title = "Cooldown Value", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.05 }, Callback = function(v) ToolCooldown.Value = v CONFIG.Tools.Value = v end })
+end }), false, function(v) ToolCooldown.Enabled = v end)
+bindCfg("tc_v", sTools:Slider({ Title = "Cooldown Value", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.05 }, Callback = function(v) ToolCooldown.Value = v Config.tc_v = v end }), 0.05, function(v) ToolCooldown.Value = v end)
 
-local AutoCatch = {
-    Enabled = false,
-    Distance = 20,
-    Force = true,
-    Dampen = true,
-    PullStrength = 40,
-    StickyRange = 3.5,
-    StickyHold = 0.9,
-    StopRadius = 1.2,
-    Conn = nil,
-    StickyUntil = 0,
-    StickyBall = nil,
-}
-
+local AutoCatch = { Enabled = false, Distance = 20, Force = true, Dampen = true, Conn = nil, PullMult = 0.85, Cap = 55 }
 local AUTO_CATCH_ARM_FIRES = 5
 local AUTO_CATCH_BODY_FIRES = 1
+local AutoCatch_LastArmContact = { time = 0, ball = nil }
 
 local function AutoCatch_TouchLimb(limb, ball, fires)
     if not limb or not ball then return end
     for i = 1, (fires or 1) do
-        pcall(function()
-            firetouchinterest(limb, ball, 0)
-            firetouchinterest(limb, ball, 1)
-        end)
+        pcall(function() firetouchinterest(limb, ball, 0) firetouchinterest(limb, ball, 1) end)
     end
-end
-
--- Predicted ball position using velocity + gravity over dt
-local function predictBallPos(ball, dt)
-    local v = ball.AssemblyLinearVelocity
-    return ball.Position + v * dt + Vector3.new(0, -Workspace.Gravity * 0.5 * dt * dt, 0)
-end
-
--- Closest approach of ball to root within lookahead; returns timeToClosest, willPassNear
-local function timeToClosestApproach(ballPos, ballVel, rootPos, lookahead)
-    local relPos = rootPos - ballPos
-    local relVel = -ballVel
-    local vv = relVel:Dot(relVel)
-    if vv < 1e-4 then return lookahead, (ballPos - rootPos).Magnitude end
-    local t = math.clamp(relPos:Dot(relVel) / vv, 0, lookahead)
-    local closestPos = ballPos + ballVel * t + Vector3.new(0, -Workspace.Gravity * 0.5 * t * t, 0)
-    return t, (closestPos - rootPos).Magnitude
 end
 
 local function AutoCatch_ArmsFirst(ball, char)
-    for _, name in ipairs({"Right Arm", "Left Arm"}) do
+    local armHit = false
+    for _, name in ipairs({ "Right Arm", "Left Arm" }) do
         local limb = char:FindFirstChild(name)
-        if limb then AutoCatch_TouchLimb(limb, ball, AUTO_CATCH_ARM_FIRES) end
+        if limb then
+            AutoCatch_TouchLimb(limb, ball, AUTO_CATCH_ARM_FIRES)
+            if (limb.Position - ball.Position).Magnitude <= (limb.Size.Magnitude * 0.75 + 1) then armHit = true end
+        end
     end
-    for _, name in ipairs({"Right Leg", "Left Leg", "Head"}) do
+    if armHit then
+        AutoCatch_LastArmContact.time = os.clock()
+        AutoCatch_LastArmContact.ball = ball
+        return true
+    end
+    for _, name in ipairs({ "Right Leg", "Left Leg", "Head" }) do
         local limb = char:FindFirstChild(name)
         if limb then AutoCatch_TouchLimb(limb, ball, AUTO_CATCH_BODY_FIRES) end
     end
-end
-
-local function AutoCatch_KillPushback(ball, root)
-    -- zero any ball velocity component pointing away from root when contact is imminent.
-    local toRoot = (root.Position - ball.Position)
-    local dist = toRoot.Magnitude
-    if dist < 1e-3 then return end
-    local dir = toRoot.Unit
-    local vel = ball.AssemblyLinearVelocity
-    local away = vel:Dot(-dir)
-    if away > 0 then
-        -- remove only the away-facing component; preserve tangential so ball still rolls
-        local tangential = vel + dir * away
-        ball.AssemblyLinearVelocity = tangential
-    end
+    return false
 end
 
 local function AutoCatch_Tick()
@@ -1070,101 +857,56 @@ local function AutoCatch_Tick()
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-
     local balls = {}
-    for _, b in ipairs(TrackedBalls) do
-        if b and b.Parent then table.insert(balls, b) end
-    end
+    for _, b in ipairs(TrackedBalls) do if b and b.Parent then table.insert(balls, b) end end
     local main = GetMainBall()
     if main and not table.find(balls, main) then table.insert(balls, main) end
-    for _, b in ipairs(GetPracticeBalls()) do
-        if not table.find(balls, b) then table.insert(balls, b) end
-    end
+    for _, b in ipairs(GetPracticeBalls()) do if not table.find(balls, b) then table.insert(balls, b) end end
     if #balls == 0 then return end
-
-    local now = os.clock()
-    local rootPos = root.Position
-
     for _, ball in ipairs(balls) do
-        local dist = (ball.Position - rootPos).Magnitude
+        local dist = (ball.Position - root.Position).Magnitude
         if dist <= AutoCatch.Distance then
-            local ballVel = ball.AssemblyLinearVelocity
-            local tt, closest = timeToClosestApproach(ball.Position, ballVel, rootPos, 0.6)
-            local imminent = dist <= AutoCatch.StickyRange or (tt < 0.35 and closest <= AutoCatch.StickyRange)
-
-            if dist <= AutoCatch.StickyRange then
-                AutoCatch.StickyUntil = now + AutoCatch.StickyHold
-                AutoCatch.StickyBall = ball
-            end
-
             AutoCatch_ArmsFirst(ball, char)
-
-            -- kill away-facing velocity whenever the ball is close enough to push
-            if dist <= (AutoCatch.StickyRange + 1.0) then
-                AutoCatch_KillPushback(ball, root)
-            end
-
-            if AutoCatch.Force then
-                -- pull only when ball is outside stop radius; never push past centerline
-                if dist > AutoCatch.StopRadius then
-                    local toRoot = (rootPos - ball.Position)
-                    local dir = toRoot.Unit
-                    local alongSpeed = ball.AssemblyLinearVelocity:Dot(dir)
-                    if alongSpeed < AutoCatch.PullStrength then
-                        local need = math.min(AutoCatch.PullStrength - alongSpeed, 40)
-                        ball.AssemblyLinearVelocity = ball.AssemblyLinearVelocity + dir * need
-                    end
-                else
-                    -- inside stop radius: bleed all velocity so it doesn't shoot through
-                    ball.AssemblyLinearVelocity = ball.AssemblyLinearVelocity * 0.4
+            for partName, hb in pairs(LimbHitboxes) do
+                if hb and hb.Parent and (partName == "Right Arm" or partName == "Left Arm") then
+                    local bodyPart = char:FindFirstChild(partName)
+                    if bodyPart then AutoCatch_TouchLimb(bodyPart, ball, 3) end
                 end
             end
-
-            -- sticky phase: hold ball near root without launching it past
-            if now < AutoCatch.StickyUntil and AutoCatch.StickyBall == ball then
-                local stickyTarget = rootPos + (ball.Position - rootPos).Unit * math.max(AutoCatch.StopRadius, 0.6)
-                if stickyTarget.Magnitude ~= stickyTarget.Magnitude then stickyTarget = rootPos end
-                local toTarget = stickyTarget - ball.Position
-                ball.AssemblyLinearVelocity = ball.AssemblyLinearVelocity * 0.6 + toTarget * 8
+            if AutoCatch.Force then
+                local toRoot = (root.Position - ball.Position).Unit
+                local cur = ball.AssemblyLinearVelocity
+                local away = cur:Dot(-toRoot)
+                if away > 0 then
+                    local pull = math.min(away * (AutoCatch.PullMult or 0.85), AutoCatch.Cap or 55)
+                    ball.AssemblyLinearVelocity = cur + toRoot * pull
+                end
             end
-
-            if AutoCatch.Dampen then
-                pcall(function() ball.AssemblyAngularVelocity = ball.AssemblyAngularVelocity * 0.5 end)
-            end
+            if AutoCatch.Dampen then pcall(function() ball.AssemblyAngularVelocity = ball.AssemblyAngularVelocity * 0.5 end) end
         end
     end
 end
 
 local sExtra = ToolTab:Section({ Title = "Extra Tools" })
-sExtra:Toggle({
-    Title = "Auto Catch",
-    Default = false,
-    Callback = function(v)
-        AutoCatch.Enabled = v CONFIG.AutoCatch.Enabled = v
-        if v then
-            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
-            AutoCatch.Conn = RunService.Heartbeat:Connect(AutoCatch_Tick)
-        else
-            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
-            AutoCatch.StickyUntil = 0
-            AutoCatch.StickyBall = nil
-        end
-    end,
-})
-sExtra:Slider({ Title = "AutoCatch Distance", Step = 1, Value = { Min = 1, Max = 60, Default = 20 }, Callback = function(v) AutoCatch.Distance = v CONFIG.AutoCatch.Distance = v end })
-sExtra:Slider({ Title = "Pull Strength", Step = 1, Value = { Min = 0, Max = 100, Default = 40 }, Callback = function(v) AutoCatch.PullStrength = v CONFIG.AutoCatch.PullStrength = v end })
-sExtra:Slider({ Title = "Sticky Range", Step = 0.1, Value = { Min = 0, Max = 10, Default = 3.5 }, Callback = function(v) AutoCatch.StickyRange = v CONFIG.AutoCatch.StickyRange = v end })
-sExtra:Slider({ Title = "Sticky Hold (s)", Step = 0.05, Value = { Min = 0, Max = 3, Default = 0.9 }, Callback = function(v) AutoCatch.StickyHold = v CONFIG.AutoCatch.StickyHold = v end })
-sExtra:Slider({ Title = "Stop Radius", Step = 0.1, Value = { Min = 0.3, Max = 5, Default = 1.2 }, Callback = function(v) AutoCatch.StopRadius = v CONFIG.AutoCatch.StopRadius = v end })
-sExtra:Toggle({ Title = "AutoCatch Force (pull toward you)", Default = true, Callback = function(v) AutoCatch.Force = v CONFIG.AutoCatch.Force = v end })
-sExtra:Toggle({ Title = "AutoCatch Dampen Spin", Default = true, Callback = function(v) AutoCatch.Dampen = v CONFIG.AutoCatch.Dampen = v end })
+bindCfg("ac_en", sExtra:Toggle({ Title = "Auto Catch", Default = false, Callback = function(v)
+    AutoCatch.Enabled = v
+    Config.ac_en = v
+    if v then
+        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
+        AutoCatch.Conn = RunService.Heartbeat:Connect(AutoCatch_Tick)
+    else
+        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
+    end
+end }), false, function(v) AutoCatch.Enabled = v end)
+bindCfg("ac_dist", sExtra:Slider({ Title = "AutoCatch Distance", Step = 1, Value = { Min = 1, Max = 60, Default = 20 }, Callback = function(v) AutoCatch.Distance = v Config.ac_dist = v end }), 20, function(v) AutoCatch.Distance = v end)
+bindCfg("ac_force", sExtra:Toggle({ Title = "AutoCatch Force (pull toward you)", Default = true, Callback = function(v) AutoCatch.Force = v Config.ac_force = v end }), true, function(v) AutoCatch.Force = v end)
+bindCfg("ac_damp", sExtra:Toggle({ Title = "AutoCatch Dampen Spin", Default = true, Callback = function(v) AutoCatch.Dampen = v Config.ac_damp = v end }), true, function(v) AutoCatch.Dampen = v end)
+bindCfg("ac_pull", sExtra:Slider({ Title = "AutoCatch Pull Multiplier", Step = 0.05, Value = { Min = 0.5, Max = 2, Default = 0.85 }, Callback = function(v) AutoCatch.PullMult = v Config.ac_pull = v end }), 0.85, function(v) AutoCatch.PullMult = v end)
+bindCfg("ac_cap", sExtra:Slider({ Title = "AutoCatch Pull Cap", Step = 5, Value = { Min = 10, Max = 150, Default = 55 }, Callback = function(v) AutoCatch.Cap = v Config.ac_cap = v end }), 55, function(v) AutoCatch.Cap = v end)
 sExtra:Button({ Title = "Release Ball", Justify = "Center", Callback = function()
     pcall(function()
         local char = player.Character
-        if char then
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool then tool:Unequip() end
-        end
+        if char then local tool = char:FindFirstChildOfClass("Tool") if tool then tool:Unequip() end end
     end)
 end })
 sExtra:Button({ Title = "Pull Vector", Justify = "Center", Callback = function()
@@ -1180,21 +922,15 @@ end })
 -- BALL CUSTOM
 -- ============================================================
 local BallTab = Window:Tab({ Title = "Ball Custom", Icon = "circle" })
-local tpsPart = Workspace:FindFirstChild("TPSSystem") and Workspace.TPSSystem:FindFirstChild("TPS")
-local originalTPSSize = (tpsPart and tpsPart:IsA("BasePart") and tpsPart.Size) or Vector3.new(5,5,5)
+local tpsPart = workspace:FindFirstChild("TPSSystem") and workspace.TPSSystem:FindFirstChild("TPS")
+local originalTPSSize = (tpsPart and tpsPart:IsA("BasePart") and tpsPart.Size) or Vector3.new(5, 5, 5)
 local currentTPSSize = originalTPSSize.X
 local function resizeTPS(size)
-    if tpsPart and tpsPart.Parent then
-        pcall(function() tpsPart.Size = Vector3.new(size, size, size) end)
-    end
+    if tpsPart and tpsPart.Parent then pcall(function() tpsPart.Size = Vector3.new(size, size, size) end) end
 end
 local sBallSize = BallTab:Section({ Title = "Ball Size Slider" })
-sBallSize:Slider({ Title = "TPS Size", Step = 1, Value = { Min = 1, Max = 20, Default = currentTPSSize }, Callback = function(v) currentTPSSize = v CONFIG.Ball.Size = v resizeTPS(v) end })
-sBallSize:Button({ Title = "Reset TPS Size", Justify = "Center", Callback = function()
-    currentTPSSize = originalTPSSize.X
-    CONFIG.Ball.Size = currentTPSSize
-    resizeTPS(currentTPSSize)
-end })
+bindCfg("ball_size", sBallSize:Slider({ Title = "TPS Size", Step = 1, Value = { Min = 1, Max = 20, Default = currentTPSSize }, Callback = function(v) currentTPSSize = v Config.ball_size = v resizeTPS(v) end }), currentTPSSize, function(v) currentTPSSize = v resizeTPS(v) end)
+sBallSize:Button({ Title = "Reset TPS Size", Justify = "Center", Callback = function() currentTPSSize = originalTPSSize.X resizeTPS(currentTPSSize) end })
 
 -- ============================================================
 -- MOBILE GK
@@ -1202,13 +938,8 @@ end })
 local MobileTab = Window:Tab({ Title = "Mobile GK", Icon = "hand" })
 local MobL = MobileTab:Section({ Title = "On-Screen Buttons" })
 local MobR = MobileTab:Section({ Title = "Button Settings" })
+local CC = { mobEnabled = true, keepToSave = 0.08, btn = { size = 88, transparency = 0.12, locked = false, visible = true }, positions = {} }
 
-local CC = {
-    mobEnabled = true,
-    keepToSave = 0.08,
-    btn = { size = 88, transparency = 0.12, locked = false, visible = true },
-    positions = {},
-}
 local function ccFindTool(name)
     local bp = player:FindFirstChild("Backpack")
     local ch = player.Character
@@ -1224,9 +955,7 @@ local function ccGetModule(tool, which)
     if not tool then return nil end
     local m = tool:FindFirstChild(which)
     if m then return m end
-    for _, c in ipairs(tool:GetChildren()) do
-        if c.Name:lower() == which:lower() then return c end
-    end
+    for _, c in ipairs(tool:GetChildren()) do if c.Name:lower() == which:lower() then return c end end
     return nil
 end
 local function ccKeep1()
@@ -1242,7 +971,8 @@ local function ccSave()
     return true
 end
 local function ccJump()
-    local mgr = ReplicatedStorage:FindFirstChild("Managers")
+    local RS = game:GetService("ReplicatedStorage")
+    local mgr = RS:FindFirstChild("Managers")
     local bm = mgr and mgr:FindFirstChild("BManager")
     local ani = bm and bm:FindFirstChild("Animate")
     local jmp = ani and ani:FindFirstChild("jump")
@@ -1268,33 +998,13 @@ local function ccJump()
     end
     return false
 end
-local function macro_KeepSave()
-    ccKeep1()
-    task.wait(CC.keepToSave)
-    ccSave()
-end
-local function macro_JumpKeepSave()
-    ccJump()
-    task.wait(CC.keepToSave)
-    ccKeep1()
-    task.wait(CC.keepToSave)
-    ccSave()
-end
+local function macro_KeepSave() ccKeep1() task.wait(CC.keepToSave) ccSave() end
+local function macro_JumpKeepSave() ccJump() task.wait(CC.keepToSave) ccKeep1() task.wait(CC.keepToSave) ccSave() end
 local CC_MACROS = { KeepSave = macro_KeepSave, JumpKeepSave = macro_JumpKeepSave }
-
-local CC_BTNS = {
-    { id = "ccKS",  label = "K1\n+SAVE",   combo = "KeepSave" },
-    { id = "ccJKS", label = "JUMP\nK1+SV", combo = "JumpKeepSave" },
-}
-local CC_DEFAULT_POS = {
-    ccKS  = UDim2.new(0.62, 0, 0.66, 0),
-    ccJKS = UDim2.new(0.76, 0, 0.66, 0),
-}
+local CC_BTNS = { { id = "ccKS", label = "K1\n+SAVE", combo = "KeepSave" }, { id = "ccJKS", label = "JUMP\nK1+SV", combo = "JumpKeepSave" } }
+local CC_DEFAULT_POS = { ccKS = UDim2.new(0.62, 0, 0.66, 0), ccJKS = UDim2.new(0.76, 0, 0.66, 0) }
 local ccRoot = game:GetService("CoreGui")
-pcall(function()
-    local ok, hui = pcall(gethui)
-    if ok and hui then ccRoot = hui end
-end)
+pcall(function() local ok, hui = pcall(gethui) if ok and hui then ccRoot = hui end end)
 local ccOld = ccRoot:FindFirstChild("Fivelyss_MobileGK")
 if ccOld then ccOld:Destroy() end
 local ccGui = Instance.new("ScreenGui")
@@ -1310,10 +1020,7 @@ local function ccRunCombo(id)
     local fn = CC_MACROS[id]
     if not fn or ccBusy then return end
     ccBusy = true
-    task.spawn(function()
-        pcall(fn)
-        ccBusy = false
-    end)
+    task.spawn(function() pcall(fn) ccBusy = false end)
 end
 local function ccAddButton(def)
     local pos = CC.positions[def.id] or CC_DEFAULT_POS[def.id] or UDim2.new(0.5, 0, 0.5, 0)
@@ -1334,9 +1041,7 @@ local function ccAddButton(def)
     btn.Visible = true
     btn.AutoButtonColor = false
     btn.Parent = ccGui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 10) corner.Parent = btn
     local stroke = Instance.new("UIStroke")
     stroke.Color = CC.btn.locked and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 200, 60)
     stroke.Thickness = 1.4
@@ -1368,9 +1073,7 @@ local function ccAddButton(def)
         if dragging then
             dragging = false
             CC.positions[def.id] = btn.Position
-            if (input.Position - (dragStart or input.Position)).Magnitude < 6 and not fired and CC.mobEnabled then
-                ccRunCombo(def.combo)
-            end
+            if (input.Position - (dragStart or input.Position)).Magnitude < 6 and not fired and CC.mobEnabled then ccRunCombo(def.combo) end
         end
         fired = false
     end)
@@ -1386,22 +1089,19 @@ local function ccSyncOpacity()
         if r.stroke then r.stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1) end
     end
 end
-local function ccSyncLock() for _, r in pairs(ccRefs) do r.stroke.Color = CC.btn.locked and Color3.fromRGB(255,105,180) or Color3.fromRGB(255,200,60) end end
+local function ccSyncLock()
+    for _, r in pairs(ccRefs) do r.stroke.Color = CC.btn.locked and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 200, 60) end
+end
 local function ccSyncVisible() ccGui.Enabled = CC.btn.visible end
-getgenv().TPSULT_CC = {
-    Config = CC, Macros = CC_MACROS,
-    Keep1 = ccKeep1, Save = ccSave, Jump = ccJump,
-    RunCombo = ccRunCombo, Gui = ccGui, AddButton = ccAddButton,
-    SyncSizes = ccSyncSizes, SyncOpacity = ccSyncOpacity, SyncLock = ccSyncLock, SyncVisible = ccSyncVisible,
-}
-MobL:Toggle({ Title = "Show On-Screen Buttons", Default = true, Callback = function(v) CC.btn.visible = v CONFIG.Mobile.btnVisible = v ccSyncVisible() end })
-MobL:Toggle({ Title = "Lock Buttons (tap = run)", Default = false, Callback = function(v) CC.btn.locked = v CONFIG.Mobile.btnLocked = v ccSyncLock() end })
-MobL:Toggle({ Title = "Enable Macros", Default = true, Callback = function(v) CC.mobEnabled = v CONFIG.Mobile.mobEnabled = v end })
+getgenv().TPSULT_CC = { Config = CC, Macros = CC_MACROS, Keep1 = ccKeep1, Save = ccSave, Jump = ccJump, RunCombo = ccRunCombo, Gui = ccGui, AddButton = ccAddButton, SyncSizes = ccSyncSizes, SyncOpacity = ccSyncOpacity, SyncLock = ccSyncLock, SyncVisible = ccSyncVisible }
+bindCfg("mg_vis", MobL:Toggle({ Title = "Show On-Screen Buttons", Default = true, Callback = function(v) CC.btn.visible = v Config.mg_vis = v ccSyncVisible() end }), true, function(v) CC.btn.visible = v ccSyncVisible() end)
+bindCfg("mg_lock", MobL:Toggle({ Title = "Lock Buttons (tap = run)", Default = false, Callback = function(v) CC.btn.locked = v Config.mg_lock = v ccSyncLock() end }), false, function(v) CC.btn.locked = v ccSyncLock() end)
+bindCfg("mg_en", MobL:Toggle({ Title = "Enable Macros", Default = true, Callback = function(v) CC.mobEnabled = v Config.mg_en = v end }), true, function(v) CC.mobEnabled = v end)
 MobL:Button({ Title = "Test Keep+Save", Justify = "Center", Callback = function() ccRunCombo("KeepSave") end })
 MobL:Button({ Title = "Test Jump+Keep+Save", Justify = "Center", Callback = function() ccRunCombo("JumpKeepSave") end })
-MobR:Slider({ Title = "Button Size", Step = 2, Value = { Min = 40, Max = 180, Default = 88 }, Callback = function(v) CC.btn.size = v CONFIG.Mobile.btnSize = v ccSyncSizes() end })
-MobR:Slider({ Title = "Button Visibility (Transparency)", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.12 }, Callback = function(v) CC.btn.transparency = v CONFIG.Mobile.btnTransparency = v ccSyncOpacity() end })
-MobR:Slider({ Title = "Keep → Save Gap", Step = 0.01, Value = { Min = 0, Max = 0.5, Default = 0.08 }, Callback = function(v) CC.keepToSave = v CONFIG.Mobile.keepToSave = v end })
+bindCfg("mg_size", MobR:Slider({ Title = "Button Size", Step = 2, Value = { Min = 40, Max = 180, Default = 88 }, Callback = function(v) CC.btn.size = v Config.mg_size = v ccSyncSizes() end }), 88, function(v) CC.btn.size = v ccSyncSizes() end)
+bindCfg("mg_tp", MobR:Slider({ Title = "Button Visibility (Transparency)", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.12 }, Callback = function(v) CC.btn.transparency = v Config.mg_tp = v ccSyncOpacity() end }), 0.12, function(v) CC.btn.transparency = v ccSyncOpacity() end)
+bindCfg("mg_gap", MobR:Slider({ Title = "Keep → Save Gap", Step = 0.01, Value = { Min = 0, Max = 0.5, Default = 0.08 }, Callback = function(v) CC.keepToSave = v Config.mg_gap = v end }), 0.08, function(v) CC.keepToSave = v end)
 MobR:Button({ Title = "Reset Button Positions", Justify = "Center", Callback = function()
     for id, pos in pairs(CC_DEFAULT_POS) do
         CC.positions[id] = pos
@@ -1415,101 +1115,78 @@ end })
 local MiscTab = Window:Tab({ Title = "Misc", Icon = "sparkles" })
 local AntiSection = MiscTab:Section({ Title = "Anti Kick" })
 AntiSection:Button({ Title = "Anti Offside", Justify = "Center", Callback = function()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
+    for _, obj in ipairs(workspace:GetDescendants()) do
         if obj.Name == "Offside" or obj.Name == "Offside Check" then pcall(function() obj:Destroy() end) end
     end
 end })
 
 -- ============================================================
--- CONFIG TAB (save / load / list / delete / reset)
+-- CONFIG TAB
 -- ============================================================
-local ConfigTab = Window:Tab({ Title = "Configs", Icon = "save" })
-local cfgS1 = ConfigTab:Section({ Title = "Save" })
-ConfigUI.NameBox = "default"
-cfgS1:Input({ Title = "Config Name", Value = "default", Callback = function(v) ConfigUI.NameBox = v end })
-cfgS1:Button({ Title = "Save Current Config", Justify = "Center", Callback = function()
-    local ok, path = saveConfig(ConfigUI.NameBox)
-    if ok then
-        WindUI:Notify({ Title = "Config", Content = "Saved: " .. path })
-    else
-        WindUI:Notify({ Title = "Config", Content = "Save failed: " .. tostring(path) })
-    end
-end })
-cfgS1:Button({ Title = "Reload Config List", Justify = "Center", Callback = function()
-    local list = listConfigs()
-    if ConfigUI.List then pcall(function() ConfigUI.List:Refresh(list) end) end
-    WindUI:Notify({ Title = "Config", Content = "Found " .. #list .. " config(s)" })
-end })
+local ConfigTab = Window:Tab({ Title = "Config", Icon = "save" })
+local sCfg = ConfigTab:Section({ Title = "Save / Load" })
 
-local cfgS2 = ConfigTab:Section({ Title = "Load" })
-ConfigUI.List = cfgS2:Dropdown({
-    Title = "Saved Configs",
-    Values = listConfigs(),
-    Default = "default",
-    Callback = function(v) ConfigUI.NameBox = v end,
+sCfg:Button({
+    Title = "Save Config", Justify = "Center",
+    Callback = function()
+        local ok = saveConfig()
+        local n = 0 for _ in pairs(Config) do n = n + 1 end
+        if ok then WindUI:Notify({ Title = "Config", Content = "Saved " .. n .. " keys to " .. CONFIG_DIR .. "/" .. CONFIG_FILE })
+        else WindUI:Notify({ Title = "Config", Content = "Save failed — executor missing writefile" }) end
+    end,
 })
-cfgS2:Button({ Title = "Load Selected Config", Justify = "Center", Callback = function()
-    local name = ConfigUI.NameBox or (ConfigUI.List and ConfigUI.List.Value) or "default"
-    local ok, err = loadConfig(name)
-    if ok then
-        WindUI:Notify({ Title = "Config", Content = "Loaded: " .. name .. " (rejoin or reapply for all subsystems)" })
-    else
-        WindUI:Notify({ Title = "Config", Content = "Load failed: " .. tostring(err) })
-    end
-end })
-cfgS2:Button({ Title = "Delete Selected Config", Justify = "Center", Callback = function()
-    local name = ConfigUI.NameBox or "default"
-    local ok = deleteConfig(name)
-    if ok then
-        local list = listConfigs()
-        if ConfigUI.List then pcall(function() ConfigUI.List:Refresh(list) end) end
-        WindUI:Notify({ Title = "Config", Content = "Deleted: " .. name })
-    else
-        WindUI:Notify({ Title = "Config", Content = "Delete failed" })
-    end
-end })
+sCfg:Button({
+    Title = "Load Config", Justify = "Center",
+    Callback = function()
+        local ok = loadConfig()
+        if ok then WindUI:Notify({ Title = "Config", Content = "Loaded from " .. CONFIG_DIR .. "/" .. CONFIG_FILE })
+        else WindUI:Notify({ Title = "Config", Content = "No config file found" }) end
+    end,
+})
+sCfg:Button({
+    Title = "Delete Config", Justify = "Center",
+    Callback = function()
+        if delfile then pcall(function() delfile(CONFIG_DIR .. "/" .. CONFIG_FILE) end) WindUI:Notify({ Title = "Config", Content = "Config deleted" })
+        else WindUI:Notify({ Title = "Config", Content = "delfile unsupported" }) end
+    end,
+})
+sCfg:Button({
+    Title = "List Config Folder", Justify = "Center",
+    Callback = function()
+        if listfiles then
+            local ok, files = pcall(function() return listfiles(CONFIG_DIR) end)
+            if ok and files then WindUI:Notify({ Title = "Config Files", Content = table.concat(files, "\n"), Duration = 6 }) end
+        else WindUI:Notify({ Title = "Config", Content = "listfiles unsupported" }) end
+    end,
+})
+sCfg:Toggle({ Title = "Auto-Load on Inject", Default = false, Callback = function(v) Config.auto_load = v end })
+sCfg:Toggle({ Title = "Auto-Save on Close", Default = false, Callback = function(v) Config.auto_save = v end })
+sCfg:Input({
+    Title = "Config Filename", Value = "config.json", Placeholder = "config.json",
+    Callback = function(v)
+        if v and v ~= "" then CONFIG_FILE = v end
+    end,
+})
 
-local cfgS3 = ConfigTab:Section({ Title = "Utility" })
-cfgS3:Button({ Title = "Dump Config to Console", Justify = "Center", Callback = function()
-    print(serialize(CONFIG))
-    WindUI:Notify({ Title = "Config", Content = "Dumped to console" })
-end })
-cfgS3:Button({ Title = "Reset Config To Defaults", Justify = "Center", Callback = function()
-    CONFIG = {
-        FTV1 = { Distance = 2.5 },
-        HitboxExt = { LeftArmSize = 1, RightArmSize = 1, LeftLegSize = 1, RightLegSize = 1, Fixer = 1, Enabled = false },
-        CompReach = { RightLeg = false, LeftLeg = false, Head = false, Arms = false, FTHead = false, FTLegs = false, FTArms = false, Distance = 4 },
-        KeybindReach = { Enabled = false, Distance = 6 },
-        Reach = { HeadEnabled = false, HeadVisualizer = false, HeadVisTransparency = 0.7, ReachX_Head = 1, ReachY_Head = 1, ReachZ_Head = 1, RightArmEnabled = false, RightArmVisualizer = false, ArmVisTransparency = 0.7, LeftArmEnabled = false, LeftArmVisualizer = false, ReachX_Arm = 1, ReachY_Arm = 1, ReachZ_Arm = 1, RightLegEnabled = false, RightLegVisualizer = false, LegVisTransparency = 0.7, LeftLegEnabled = false, LeftLegVisualizer = false, ReachX_Leg = 1, ReachY_Leg = 1, ReachZ_Leg = 1, ReachDistance = 50 },
-        NRC = { Enabled = false, Magnitude = 4, Distance = 15 },
-        Sky = { Enabled = false, Current = "Default" },
-        Time = { Enabled = false, Value = 14 },
-        Tools = { Enabled = false, Value = 0.05 },
-        AutoCatch = { Enabled = false, Distance = 20, Force = true, Dampen = true, PullStrength = 40, StickyRange = 3.5, StickyHold = 0.9, StopRadius = 1.2 },
-        Ball = { Size = 5 },
-        Mobile = { btnVisible = true, btnLocked = false, btnSize = 88, btnTransparency = 0.12, mobEnabled = true, keepToSave = 0.08 },
-    }
-    WindUI:Notify({ Title = "Config", Content = "Reset to defaults" })
-end })
+-- ============================================================
+-- AUTO-LOAD
+-- ============================================================
+task.defer(function()
+    local loaded = loadConfig()
+    if loaded then
+        for k, apply in pairs(ConfigCallbacks) do
+            if Config[k] ~= nil then pcall(apply, Config[k]) end
+        end
+        WindUI:Notify({ Title = "Config", Content = "Auto-loaded", Duration = 3 })
+    end
+end)
 
-getgenv().TPSULT_Config = {
-    Save = saveConfig,
-    Load = loadConfig,
-    List = listConfigs,
-    Delete = deleteConfig,
-    Data = CONFIG,
-    Folder = ConfigFolder,
-}
+game:BindToClose(function() pcall(saveConfig) end)
 
 local Dialog = Window:Dialog({
     Icon = "bird",
     Title = "Loaded",
-    Content = "WindUI v2.5 — predictive AutoCatch w/ pushback kill + Config tab. VETA stamina.",
+    Content = "v2.7 — Config save/load + tuned AutoCatch pull (0.85 / cap 55).",
     Buttons = { { Title = "Continue", Callback = function() print("ok") end } }
 })
-
-WindUI:Notify({
-    Title = "TPS ULTIMATE v2.6",
-    Content = "AutoCatch pushback fixed + config save/load",
-    Duration = 3,
-})
+WindUI:Notify({ Title = "TPS ULTIMATE v2.7", Content = "Pull 0.85 / cap 55 + Config tab", Duration = 3 })
