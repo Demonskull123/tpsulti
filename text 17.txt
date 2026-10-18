@@ -9,7 +9,7 @@
 -- ============================================================
 --  0. KEY SYSTEM
 -- ============================================================
-local KeyCode = "1122334455667788991010"
+local KeyCode = "1234"
 local MaxAttempts = 3
 
 local function ShowKeyPrompt()
@@ -896,6 +896,292 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ============================================================
+--  LIMB HITBOX REACH (VETA-style) + Visualizers
+-- ============================================================
+local LimbReachL = ReachTab:AddLeftGroupbox("Limb Hitbox Reach")
+local LimbReachR = ReachTab:AddRightGroupbox("Limb Visualizers")
+
+local reachSettings = {
+    HeadEnabled = false, HeadVisualizer = false,
+    ReachX_Head = 1, ReachY_Head = 1, ReachZ_Head = 1,
+    RightArmEnabled = false, RightArmVisualizer = false,
+    LeftArmEnabled = false, LeftArmVisualizer = false,
+    ReachX_Arm = 1, ReachY_Arm = 1, ReachZ_Arm = 1,
+    RightLegEnabled = false, RightLegVisualizer = false,
+    LeftLegEnabled = false, LeftLegVisualizer = false,
+    ReachX_Leg = 1, ReachY_Leg = 1, ReachZ_Leg = 1,
+    ReachDistance = 50,
+}
+
+local LimbBodyParts = {"Head", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
+local LimbHitboxes = {}
+local LimbVisualizers = {}
+local LimbActiveTouches = {}
+local LIMB_TOUCH_COOLDOWN = 0.1
+local LimbCharacter = Cache.Character or LocalPlayer.Character
+
+local function GetReachDistanceForPart(partName)
+    if partName == "Head" then
+        if not reachSettings.HeadEnabled then return 0 end
+        local avg = (reachSettings.ReachX_Head + reachSettings.ReachY_Head + reachSettings.ReachZ_Head) / 3
+        return reachSettings.ReachDistance * avg
+    elseif partName == "Right Arm" or partName == "Left Arm" then
+        local side = partName:match("(%w+)%s")
+        if not reachSettings[side .. "ArmEnabled"] then return 0 end
+        local avg = (reachSettings.ReachX_Arm + reachSettings.ReachY_Arm + reachSettings.ReachZ_Arm) / 3
+        return reachSettings.ReachDistance * avg
+    elseif partName == "Right Leg" or partName == "Left Leg" then
+        local side = partName:match("(%w+)%s")
+        if not reachSettings[side .. "LegEnabled"] then return 0 end
+        local avg = (reachSettings.ReachX_Leg + reachSettings.ReachY_Leg + reachSettings.ReachZ_Leg) / 3
+        return reachSettings.ReachDistance * avg
+    end
+    return 0
+end
+
+local function CreateLimbHitbox(bodyPart, partName)
+    local hitbox = Instance.new("Part")
+    hitbox.Name = partName .. "_Hitbox"
+    hitbox.Anchored = false
+    hitbox.CanCollide = false
+    hitbox.Transparency = 1
+    hitbox.Massless = true
+    if partName == "Head" then
+        hitbox.Size = Vector3.new(
+            bodyPart.Size.X * reachSettings.ReachX_Head * 2,
+            bodyPart.Size.Y * reachSettings.ReachY_Head * 2,
+            bodyPart.Size.Z * reachSettings.ReachZ_Head * 2
+        )
+    elseif partName == "Right Arm" or partName == "Left Arm" then
+        hitbox.Size = Vector3.new(
+            bodyPart.Size.X * reachSettings.ReachX_Arm * 2,
+            bodyPart.Size.Y * reachSettings.ReachY_Arm * 2,
+            bodyPart.Size.Z * reachSettings.ReachZ_Arm * 2
+        )
+    else
+        hitbox.Size = Vector3.new(
+            bodyPart.Size.X * reachSettings.ReachX_Leg * 2,
+            bodyPart.Size.Y * reachSettings.ReachY_Leg * 2,
+            bodyPart.Size.Z * reachSettings.ReachZ_Leg * 2
+        )
+    end
+    hitbox.CFrame = bodyPart.CFrame
+    hitbox.Parent = bodyPart
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = bodyPart
+    weld.Part1 = hitbox
+    weld.Parent = hitbox
+    return hitbox
+end
+
+local function UpdateLimbVisualizer(partName)
+    local char = Cache.Character or LocalPlayer.Character
+    if not char then return end
+    local bodyPart = char:FindFirstChild(partName)
+    if not bodyPart then return end
+    local reachDist = GetReachDistanceForPart(partName)
+    if reachDist > 0 then
+        if LimbHitboxes[partName] then LimbHitboxes[partName]:Destroy() end
+        LimbHitboxes[partName] = CreateLimbHitbox(bodyPart, partName)
+    else
+        if LimbHitboxes[partName] then LimbHitboxes[partName]:Destroy() LimbHitboxes[partName] = nil end
+    end
+    local visOn = false
+    if partName == "Head" then visOn = reachSettings.HeadVisualizer
+    elseif partName == "Right Arm" then visOn = reachSettings.RightArmVisualizer
+    elseif partName == "Left Arm" then visOn = reachSettings.LeftArmVisualizer
+    elseif partName == "Right Leg" then visOn = reachSettings.RightLegVisualizer
+    elseif partName == "Left Leg" then visOn = reachSettings.LeftLegVisualizer end
+    if LimbVisualizers[partName] then LimbVisualizers[partName]:Destroy() LimbVisualizers[partName] = nil end
+    if visOn and LimbHitboxes[partName] then
+        local hitbox = LimbHitboxes[partName]
+        local visualizer = Instance.new("Part")
+        visualizer.Name = partName .. "_Visualizer"
+        visualizer.Size = hitbox.Size
+        visualizer.CFrame = hitbox.CFrame
+        visualizer.Anchored = false
+        visualizer.CanCollide = false
+        visualizer.Transparency = 0.7
+        visualizer.Color = Color3.fromRGB(255, 105, 180)
+        visualizer.Material = Enum.Material.Neon
+        visualizer.Massless = true
+        visualizer.Parent = hitbox
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = hitbox
+        weld.Part1 = visualizer
+        weld.Parent = visualizer
+        LimbVisualizers[partName] = visualizer
+    end
+end
+
+local function FindBallPartLimb(part)
+    if part:IsA("BasePart") and (part.Name == "TPS" or part.Name == "PSoccerBall" or BALL_SET[part.Name]) then
+        return part
+    end
+    local current = part
+    while current and current ~= Workspace do
+        if current:IsA("BasePart") and (current.Name == "PSoccerBall" or current.Name == "TPS" or BALL_SET[current.Name]) then
+            return current
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function CreateAllLimbHitboxes()
+    local char = Cache.Character or LocalPlayer.Character
+    if not char then return end
+    for _, partName in ipairs(LimbBodyParts) do
+        local bodyPart = char:FindFirstChild(partName)
+        if bodyPart and GetReachDistanceForPart(partName) > 0 then
+            if LimbHitboxes[partName] then LimbHitboxes[partName]:Destroy() end
+            LimbHitboxes[partName] = CreateLimbHitbox(bodyPart, partName)
+            UpdateLimbVisualizer(partName)
+        end
+    end
+end
+
+local function RemoveAllLimbHitboxes()
+    for _, h in pairs(LimbHitboxes) do if h then h:Destroy() end end
+    for _, v in pairs(LimbVisualizers) do if v then v:Destroy() end end
+    table.clear(LimbHitboxes)
+    table.clear(LimbVisualizers)
+    table.clear(LimbActiveTouches)
+end
+
+local function CheckLimbBallCollisions()
+    local char = Cache.Character or LocalPlayer.Character
+    if not char or not char.Parent then return end
+    local currentTime = tick()
+    local newTouches = {}
+    for partName, hitbox in pairs(LimbHitboxes) do
+        if hitbox and hitbox.Parent then
+            local bodyPart = char:FindFirstChild(partName)
+            if bodyPart then
+                local overlapParams = OverlapParams.new()
+                overlapParams.FilterDescendantsInstances = {char}
+                overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+                local partsInBox = Workspace:GetPartBoundsInBox(hitbox.CFrame, hitbox.Size, overlapParams)
+                for _, part in ipairs(partsInBox) do
+                    local ballPart = FindBallPartLimb(part)
+                    if ballPart then
+                        local touchKey = partName .. ":" .. ballPart:GetFullName()
+                        newTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
+                        if not LimbActiveTouches[touchKey] or (currentTime - LimbActiveTouches[touchKey].time) > LIMB_TOUCH_COOLDOWN then
+                            LimbActiveTouches[touchKey] = {part = ballPart, bodyPart = bodyPart, time = currentTime}
+                            pcall(function()
+                                firetouchinterest(ballPart, bodyPart, 0)
+                                task.wait()
+                                firetouchinterest(ballPart, bodyPart, 1)
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    for touchKey, touchData in pairs(LimbActiveTouches) do
+        if not newTouches[touchKey] and (currentTime - touchData.time) > LIMB_TOUCH_COOLDOWN then
+            LimbActiveTouches[touchKey] = nil
+        end
+    end
+end
+
+CreateAllLimbHitboxes()
+
+local limbLastUpdate = 0
+RunService.Heartbeat:Connect(function()
+    local now = tick()
+    if now - limbLastUpdate >= 0.1 then
+        limbLastUpdate = now
+        pcall(CheckLimbBallCollisions)
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    RemoveAllLimbHitboxes()
+    task.wait(2)
+    CreateAllLimbHitboxes()
+end)
+
+-- UI controls
+LimbReachL:AddToggle("LR_HeadEn", { Text = "Enable Head Reach", Default = false, Callback = function(v)
+    reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head")
+end })
+LimbReachL:AddSlider("LR_HeadX", { Text = "Head X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachX_Head = v UpdateLimbVisualizer("Head")
+end })
+LimbReachL:AddSlider("LR_HeadY", { Text = "Head Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachY_Head = v UpdateLimbVisualizer("Head")
+end })
+LimbReachL:AddSlider("LR_HeadZ", { Text = "Head Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachZ_Head = v UpdateLimbVisualizer("Head")
+end })
+LimbReachL:AddDivider()
+LimbReachL:AddToggle("LR_RArmEn", { Text = "Enable Right Arm", Default = false, Callback = function(v)
+    reachSettings.RightArmEnabled = v UpdateLimbVisualizer("Right Arm")
+end })
+LimbReachL:AddToggle("LR_LArmEn", { Text = "Enable Left Arm", Default = false, Callback = function(v)
+    reachSettings.LeftArmEnabled = v UpdateLimbVisualizer("Left Arm")
+end })
+LimbReachL:AddSlider("LR_ArmX", { Text = "Arm X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachX_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm")
+end })
+LimbReachL:AddSlider("LR_ArmY", { Text = "Arm Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachY_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm")
+end })
+LimbReachL:AddSlider("LR_ArmZ", { Text = "Arm Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachZ_Arm = v UpdateLimbVisualizer("Right Arm") UpdateLimbVisualizer("Left Arm")
+end })
+LimbReachL:AddDivider()
+LimbReachL:AddToggle("LR_RLegEn", { Text = "Enable Right Leg", Default = false, Callback = function(v)
+    reachSettings.RightLegEnabled = v UpdateLimbVisualizer("Right Leg")
+end })
+LimbReachL:AddToggle("LR_LLegEn", { Text = "Enable Left Leg", Default = false, Callback = function(v)
+    reachSettings.LeftLegEnabled = v UpdateLimbVisualizer("Left Leg")
+end })
+LimbReachL:AddSlider("LR_LegX", { Text = "Leg X Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachX_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg")
+end })
+LimbReachL:AddSlider("LR_LegY", { Text = "Leg Y Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachY_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg")
+end })
+LimbReachL:AddSlider("LR_LegZ", { Text = "Leg Z Size", Default = 1, Min = 0, Max = 20, Rounding = 1, Callback = function(v)
+    reachSettings.ReachZ_Leg = v UpdateLimbVisualizer("Right Leg") UpdateLimbVisualizer("Left Leg")
+end })
+
+LimbReachR:AddToggle("LR_HeadVis", { Text = "Head Visualizer", Default = false, Callback = function(v)
+    reachSettings.HeadVisualizer = v UpdateLimbVisualizer("Head")
+end })
+LimbReachR:AddToggle("LR_RArmVis", { Text = "Right Arm Visualizer", Default = false, Callback = function(v)
+    reachSettings.RightArmVisualizer = v UpdateLimbVisualizer("Right Arm")
+end })
+LimbReachR:AddToggle("LR_LArmVis", { Text = "Left Arm Visualizer", Default = false, Callback = function(v)
+    reachSettings.LeftArmVisualizer = v UpdateLimbVisualizer("Left Arm")
+end })
+LimbReachR:AddToggle("LR_RLegVis", { Text = "Right Leg Visualizer", Default = false, Callback = function(v)
+    reachSettings.RightLegVisualizer = v UpdateLimbVisualizer("Right Leg")
+end })
+LimbReachR:AddToggle("LR_LLegVis", { Text = "Left Leg Visualizer", Default = false, Callback = function(v)
+    reachSettings.LeftLegVisualizer = v UpdateLimbVisualizer("Left Leg")
+end })
+LimbReachR:AddButton({ Text = "Refresh All Limb Hitboxes", Func = function()
+    RemoveAllLimbHitboxes()
+    CreateAllLimbHitboxes()
+    Notify("Limb hitboxes refreshed", 2)
+end })
+LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
+    reachSettings.HeadEnabled = false
+    reachSettings.RightArmEnabled = false
+    reachSettings.LeftArmEnabled = false
+    reachSettings.RightLegEnabled = false
+    reachSettings.LeftLegEnabled = false
+    RemoveAllLimbHitboxes()
+    Notify("All limb reach OFF", 2)
+end })
+
+
+-- ============================================================
 --  TAB : BOOSTS
 -- ============================================================
 local BoostTab = Window:AddTab("Boosts", "zap")
@@ -946,23 +1232,47 @@ CardL:AddButton({ Text = "Bronze Card Adder", Func = function() FireCard(1441969
 CardL:AddButton({ Text = "Silver Card Adder", Func = function() FireCard(14419695959) Notify("Silver Card", 2) end })
 
 StaminaL:AddLabel("WalkSpeed: 22 normal / 16 sprint")
+local InfStamEnabled = false
+local InfStamOldNC = nil
 StaminaL:AddToggle("UnlimitedStaminaToggle", {
     Text = "Enable Unlimited Stamina",
     Default = false,
     Callback = function(v)
+        InfStamEnabled = v
         if v then
             pcall(function()
                 local mt = getrawmetatable(game)
                 if not mt then return end
                 setreadonly(mt, false)
-                local oldNC = mt.__namecall
+                if not InfStamOldNC then InfStamOldNC = mt.__namecall end
                 mt.__namecall = newcclosure(function(self, ...)
-                    if getnamecallmethod() == "FireServer" and tostring(self):lower():find("sprint") then
-                        return nil
+                    if InfStamEnabled then
+                        local method = getnamecallmethod()
+                        if method == "FireServer" or method == "InvokeServer" then
+                            local n = tostring(self):lower()
+                            if n:find("sprint") or n:find("stamina") then
+                                return
+                            end
+                        end
                     end
-                    return oldNC(self, ...)
+                    return InfStamOldNC(self, ...)
+                end)
+                -- also spoof WalkSpeed index so client thinks it is sprinting/normal
+                local oldIndex = mt.__index
+                mt.__index = newcclosure(function(o, k)
+                    if InfStamEnabled and tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then
+                        return BASE_WALKSPEED
+                    end
+                    return oldIndex(o, k)
                 end)
                 setreadonly(mt, true)
+            end)
+            -- intercept FE sprint remote if present
+            pcall(function()
+                local fe = Workspace:FindFirstChild("FE") or game:GetService("ReplicatedStorage"):FindFirstChild("FE")
+                if fe and fe:FindFirstChild("Sprint") then
+                    -- blocked via namecall above
+                end
             end)
             local hum = GetHumanoid()
             if hum then hum.WalkSpeed = BASE_WALKSPEED end
@@ -2546,6 +2856,307 @@ end })
 task.spawn(function() task.wait(3) ApplyUIBackground() end)
 
 -- ============================================================
+--  MOBILE GK CUSTOM CONTROLS (on-screen buttons)
+-- ============================================================
+local MobileTab = Window:AddTab("Mobile GK", "smartphone")
+local MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
+local MobR = MobileTab:AddRightGroupbox("Button Settings")
+
+local CC = {
+    mobEnabled = true,
+    keepToSave = 0.08,
+    btn = {
+        size = 88,
+        transparency = 0.12,
+        locked = false,
+        visible = true,
+    },
+    positions = {},
+}
+
+local function ccFindTool(name)
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+    local ch = LocalPlayer.Character
+    return (bp and bp:FindFirstChild(name)) or (ch and ch:FindFirstChild(name))
+end
+
+local function ccGkTool()
+    local tc = LocalPlayer.TeamColor
+    if tc == BrickColor.new("Camo") then return ccFindTool("ToolGGK") end
+    if tc == BrickColor.new("Really blue") then return ccFindTool("ToolBGK") end
+    return ccFindTool("ToolGGK") or ccFindTool("ToolBGK")
+end
+
+local function ccGetModule(tool, which)
+    if not tool then return nil end
+    local m = tool:FindFirstChild(which)
+    if m then return m end
+    for _, c in ipairs(tool:GetChildren()) do
+        if c.Name:lower() == which:lower() then return c end
+    end
+    return nil
+end
+
+local function ccKeep1()
+    local mod = ccGetModule(ccGkTool(), "Keep1Module")
+    if not mod then return false end
+    task.spawn(function() pcall(function() require(mod).Keep1() end) end)
+    return true
+end
+
+local function ccSave()
+    local mod = ccGetModule(ccGkTool(), "SaveModule")
+    if not mod then return false end
+    task.spawn(function() pcall(function() require(mod).Save() end) end)
+    return true
+end
+
+local function ccJump()
+    local RS = game:GetService("ReplicatedStorage")
+    local mgr = RS:FindFirstChild("Managers")
+    local bm = mgr and mgr:FindFirstChild("BManager")
+    local ani = bm and bm:FindFirstChild("Animate")
+    local jmp = ani and ani:FindFirstChild("jump")
+    if jmp then
+        local ok = pcall(function()
+            local mod = require(jmp)
+            if type(mod) == "function" then mod()
+            elseif type(mod) == "table" and type(mod.Play) == "function" then mod.Play()
+            elseif type(mod) == "table" and type(mod.Jump) == "function" then mod.Jump() end
+        end)
+        if ok then return true end
+    end
+    local h = GetHumanoid()
+    if h and h.Parent and h.Health > 0 then
+        pcall(function()
+            h:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+            h:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+            h.Jump = true
+            h:ChangeState(Enum.HumanoidStateType.Jumping)
+        end)
+        return true
+    end
+    return false
+end
+
+local function macro_KeepSave()
+    ccKeep1()
+    task.wait(CC.keepToSave)
+    ccSave()
+end
+
+local function macro_JumpKeepSave()
+    ccJump()
+    task.wait(CC.keepToSave)
+    ccKeep1()
+    task.wait(CC.keepToSave)
+    ccSave()
+end
+
+local CC_MACROS = {
+    KeepSave = macro_KeepSave,
+    JumpKeepSave = macro_JumpKeepSave,
+}
+
+local CC_BTNS = {
+    { id = "ccKS",  label = "K1\n+SAVE",   combo = "KeepSave" },
+    { id = "ccJKS", label = "JUMP\nK1+SV", combo = "JumpKeepSave" },
+}
+local CC_DEFAULT_POS = {
+    ccKS  = UDim2.new(0.62, 0, 0.66, 0),
+    ccJKS = UDim2.new(0.76, 0, 0.66, 0),
+}
+
+local ccRoot = CoreGui
+pcall(function()
+    local ok, hui = pcall(gethui)
+    if ok and hui then ccRoot = hui end
+end)
+
+local ccOld = ccRoot:FindFirstChild("Fivelyss_MobileGK")
+if ccOld then ccOld:Destroy() end
+
+local ccGui = Instance.new("ScreenGui")
+ccGui.Name = "Fivelyss_MobileGK"
+ccGui.ResetOnSpawn = false
+ccGui.DisplayOrder = 999997
+ccGui.IgnoreGuiInset = true
+ccGui.Enabled = CC.btn.visible
+ccGui.Parent = ccRoot
+
+local ccRefs = {}
+local ccBusy = false
+
+local function ccRunCombo(id)
+    local fn = CC_MACROS[id]
+    if not fn or ccBusy then return end
+    ccBusy = true
+    task.spawn(function()
+        pcall(fn)
+        ccBusy = false
+    end)
+end
+
+local function ccAddButton(def)
+    local pos = CC.positions[def.id] or CC_DEFAULT_POS[def.id] or UDim2.new(0.5, 0, 0.5, 0)
+    CC.positions[def.id] = pos
+
+    local btn = Instance.new("TextButton")
+    btn.Name = def.id
+    btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(22, 12, 20)
+    btn.BackgroundTransparency = CC.btn.transparency
+    btn.TextColor3 = Color3.fromRGB(255, 105, 180)
+    btn.TextTransparency = CC.btn.transparency
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = def.label or def.id
+    btn.BorderSizePixel = 0
+    btn.Active = true
+    btn.Visible = true
+    btn.AutoButtonColor = false
+    btn.Parent = ccGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = CC.btn.locked and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 200, 60)
+    stroke.Thickness = 1.4
+    stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
+    stroke.Parent = btn
+
+    local dragging, dragStart, startPos, fired = false, nil, nil, false
+
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if input.UserInputState and input.UserInputState ~= Enum.UserInputState.Begin then return end
+        if CC.btn.locked then
+            if CC.mobEnabled then ccRunCombo(def.combo) end
+            fired = true
+            return
+        end
+        dragging = true
+        dragStart = input.Position
+        startPos = btn.Position
+        fired = false
+    end)
+
+    btn.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            local d = input.Position - dragStart
+            btn.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
+
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if dragging then
+            dragging = false
+            CC.positions[def.id] = btn.Position
+            if (input.Position - (dragStart or input.Position)).Magnitude < 6
+            and not fired and CC.mobEnabled then
+                ccRunCombo(def.combo)
+            end
+        end
+        fired = false
+    end)
+
+    ccRefs[def.id] = { btn = btn, stroke = stroke }
+end
+
+for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
+
+local function ccSyncSizes()
+    for _, r in pairs(ccRefs) do
+        r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
+    end
+end
+local function ccSyncOpacity()
+    for _, r in pairs(ccRefs) do
+        r.btn.BackgroundTransparency = CC.btn.transparency
+        r.btn.TextTransparency = CC.btn.transparency
+        if r.stroke then
+            r.stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
+        end
+    end
+end
+local function ccSyncLock()
+    for _, r in pairs(ccRefs) do
+        r.stroke.Color = CC.btn.locked and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 200, 60)
+    end
+end
+local function ccSyncVisible()
+    ccGui.Enabled = CC.btn.visible
+end
+
+MobL:AddToggle("MobShowButtons", {
+    Text = "Show On-Screen Buttons",
+    Default = true,
+    Callback = function(v)
+        CC.btn.visible = v
+        ccSyncVisible()
+        Notify("Buttons " .. (v and "shown" or "hidden"), 2)
+    end,
+})
+MobL:AddToggle("MobLockButtons", {
+    Text = "Lock Buttons (tap = run)",
+    Default = false,
+    Callback = function(v)
+        CC.btn.locked = v
+        ccSyncLock()
+        Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2)
+    end,
+})
+MobL:AddToggle("MobEnableMacros", {
+    Text = "Enable Macros",
+    Default = true,
+    Callback = function(v) CC.mobEnabled = v end,
+})
+MobL:AddButton({ Text = "Test Keep+Save", Func = function()
+    if ccRunCombo then ccRunCombo("KeepSave") end
+    Notify("Keep+Save fired", 2)
+end })
+MobL:AddButton({ Text = "Test Jump+Keep+Save", Func = function()
+    if ccRunCombo then ccRunCombo("JumpKeepSave") end
+    Notify("Jump+Keep+Save fired", 2)
+end })
+
+MobR:AddSlider("MobBtnSize", {
+    Text = "Button Size",
+    Default = 88, Min = 40, Max = 180, Rounding = 0, Suffix = " px",
+    Callback = function(v) CC.btn.size = v ccSyncSizes() end,
+})
+MobR:AddSlider("MobBtnTrans", {
+    Text = "Button Transparency",
+    Default = 0.12, Min = 0, Max = 1, Rounding = 2,
+    Callback = function(v) CC.btn.transparency = v ccSyncOpacity() end,
+})
+MobR:AddSlider("MobKeepGap", {
+    Text = "Keep → Save Gap",
+    Default = 0.08, Min = 0, Max = 0.5, Rounding = 2, Suffix = "s",
+    Callback = function(v) CC.keepToSave = v end,
+})
+MobR:AddButton({ Text = "Reset Button Positions", Func = function()
+    for id, pos in pairs(CC_DEFAULT_POS) do
+        CC.positions[id] = pos
+        if ccRefs[id] and ccRefs[id].btn then
+            ccRefs[id].btn.Position = pos
+        end
+    end
+    Notify("Positions reset", 2)
+end })
+
+
+-- ============================================================
 --  FINAL
 -- ============================================================
 Library:Notify("🌹 FIVELYSS v2.0 loaded", 4)
@@ -2558,5 +3169,8 @@ print("============================================")
 print("  FIVELYSS v2.0 - COMPLETE EDITION")
 print("  TPS Ultimate Soccer & MPS Street Soccer")
 print("  Theme: Rose & Noir (Obsidian)")
-print("  All features from list included")
+print("  + Limb Hitbox Reach + Visualizers")
+print("  + Unlimited Stamina (VETA method)")
+print("  + Mobile GK On-Screen Buttons")
+print("  Key: 1234")
 print("============================================")
