@@ -209,7 +209,7 @@ local function FTV1_Hook(limb, ball)
     end)
 end
 
-local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head", "Torso"}
+local ALL_LIMBS = {"Right Leg", "Left Leg", "Right Arm", "Left Arm", "Head"}
 local TrackedBalls = {}
 local BALL_NAMES = {
     "TPS", "MPS", "MPSBall", "StreetBall",
@@ -348,18 +348,16 @@ sHitbox:Toggle({
 })
 
 local CompReachCfg = {
-    RightLeg = false, LeftLeg = false, Head = false, Chest = false, Arms = false,
-    FTHead = false, FTChest = false, FTLegs = false, FTArms = false,
+    RightLeg = false, LeftLeg = false, Head = false, Arms = false,
+    FTHead = false, FTLegs = false, FTArms = false,
     Distance = 4,
 }
 local sComp = HitboxTab:Section({ Title = "Comp Reach" })
 sComp:Toggle({ Title = "Right Leg Reach", Default = false, Callback = function(v) CompReachCfg.RightLeg = v end })
 sComp:Toggle({ Title = "Left Leg Reach", Default = false, Callback = function(v) CompReachCfg.LeftLeg = v end })
 sComp:Toggle({ Title = "Head Reach", Default = false, Callback = function(v) CompReachCfg.Head = v end })
-sComp:Toggle({ Title = "Chest Reach", Default = false, Callback = function(v) CompReachCfg.Chest = v end })
 sComp:Toggle({ Title = "Arms Reach", Default = false, Callback = function(v) CompReachCfg.Arms = v end })
 sComp:Toggle({ Title = "FireTouch Head", Default = false, Callback = function(v) CompReachCfg.FTHead = v end })
-sComp:Toggle({ Title = "FireTouch Chest", Default = false, Callback = function(v) CompReachCfg.FTChest = v end })
 sComp:Toggle({ Title = "FireTouch Legs", Default = false, Callback = function(v) CompReachCfg.FTLegs = v end })
 sComp:Toggle({ Title = "FireTouch Arms", Default = false, Callback = function(v) CompReachCfg.FTArms = v end })
 sComp:Slider({ Title = "Comp Reach Distance", Step = 0.1, Value = { Min = 0, Max = 10, Default = 4 }, Callback = function(v) CompReachCfg.Distance = v end })
@@ -378,7 +376,6 @@ RunService.Heartbeat:Connect(function()
     if CompReachCfg.RightLeg or CompReachCfg.FTLegs then touch("Right Leg") end
     if CompReachCfg.LeftLeg or CompReachCfg.FTLegs then touch("Left Leg") end
     if CompReachCfg.Head or CompReachCfg.FTHead then touch("Head") end
-    if CompReachCfg.Chest or CompReachCfg.FTChest then touch("Torso") end
     if CompReachCfg.Arms or CompReachCfg.FTArms then touch("Right Arm") touch("Left Arm") end
 end)
 
@@ -416,7 +413,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ============================================================
--- LIMB REACH with visualizers + transparency + sliders 0-10 step 0.1
+-- LIMB REACH with visualizers (no torso)
 -- ============================================================
 local LimbTab = Window:Tab({ Title = "Limb Reach", Icon = "crosshair" })
 
@@ -696,7 +693,6 @@ sCards:Button({ Title = "Legendary Card", Justify = "Center", Callback = functio
 sCards:Button({ Title = "Bronze Card", Justify = "Center", Callback = function() FireBoost(14419693337, "Card") end })
 sCards:Button({ Title = "Silver Card", Justify = "Center", Callback = function() FireBoost(14419695959, "Card") end })
 
--- UNLIMITED STAMINA — VETA method
 local sStam = BoostTab:Section({ Title = "Unlimited Stamina" })
 local InfStamEnabled = false
 sStam:Toggle({
@@ -952,7 +948,7 @@ TimeL:Button({ Title = "Bright Ambient", Justify = "Center", Callback = function
 TimeL:Button({ Title = "Dark Ambient", Justify = "Center", Callback = function() SkyLighting.Ambient = Color3.fromRGB(20,20,20) SkyLighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
 
 -- ============================================================
--- TOOLS (No cooldown, AutoCatch)
+-- TOOLS + AUTO CATCH (arm priority, no torso)
 -- ============================================================
 local ToolTab = Window:Tab({ Title = "Tools", Icon = "wrench" })
 local ToolCooldown = { Enabled = false, Value = 0.05, Conn = nil }
@@ -975,34 +971,110 @@ sTools:Toggle({ Title = "No Tool Cooldown", Default = false, Callback = function
 end })
 sTools:Slider({ Title = "Cooldown Value", Step = 0.01, Value = { Min = 0, Max = 1, Default = 0.05 }, Callback = function(v) ToolCooldown.Value = v end })
 
-local AutoCatch = { Enabled = false, Distance = 15, Conn = nil }
-local sExtra = ToolTab:Section({ Title = "Extra Tools" })
-sExtra:Toggle({ Title = "Auto Catch", Default = false, Callback = function(v)
-    AutoCatch.Enabled = v
-    if v then
-        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
-        AutoCatch.Conn = RunService.Heartbeat:Connect(function()
-            if not AutoCatch.Enabled then return end
-            local ball = GetMainBall()
-            local char = player.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if not ball or not root or not char then return end
-            if (ball.Position - root.Position).Magnitude > AutoCatch.Distance then return end
-            for _, name in ipairs({"Right Arm", "Left Arm"}) do
-                local arm = char:FindFirstChild(name)
-                if arm then
-                    pcall(function()
-                        firetouchinterest(arm, ball, 0)
-                        firetouchinterest(arm, ball, 1)
-                    end)
+local AutoCatch = { Enabled = false, Distance = 20, Force = true, Dampen = true, Conn = nil }
+local AUTO_CATCH_ARM_FIRES = 5
+local AUTO_CATCH_BODY_FIRES = 1
+local AutoCatch_LastArmContact = { time = 0, ball = nil }
+
+local function AutoCatch_TouchLimb(limb, ball, fires)
+    if not limb or not ball then return end
+    for i = 1, (fires or 1) do
+        pcall(function()
+            firetouchinterest(limb, ball, 0)
+            firetouchinterest(limb, ball, 1)
+        end)
+    end
+end
+
+local function AutoCatch_ArmsFirst(ball, char)
+    local armHit = false
+    for _, name in ipairs({"Right Arm", "Left Arm"}) do
+        local limb = char:FindFirstChild(name)
+        if limb then
+            AutoCatch_TouchLimb(limb, ball, AUTO_CATCH_ARM_FIRES)
+            if (limb.Position - ball.Position).Magnitude <= (limb.Size.Magnitude * 0.75 + 1) then
+                armHit = true
+            end
+        end
+    end
+    if armHit then
+        AutoCatch_LastArmContact.time = os.clock()
+        AutoCatch_LastArmContact.ball = ball
+        return true
+    end
+    for _, name in ipairs({"Right Leg", "Left Leg", "Head"}) do
+        local limb = char:FindFirstChild(name)
+        if limb then AutoCatch_TouchLimb(limb, ball, AUTO_CATCH_BODY_FIRES) end
+    end
+    return false
+end
+
+local function AutoCatch_Tick()
+    if not AutoCatch.Enabled then return end
+    local char = player.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local balls = {}
+    for _, b in ipairs(TrackedBalls) do
+        if b and b.Parent then table.insert(balls, b) end
+    end
+    local main = GetMainBall()
+    if main and not table.find(balls, main) then table.insert(balls, main) end
+    for _, b in ipairs(GetPracticeBalls()) do
+        if not table.find(balls, b) then table.insert(balls, b) end
+    end
+    if #balls == 0 then return end
+
+    for _, ball in ipairs(balls) do
+        local dist = (ball.Position - root.Position).Magnitude
+        if dist <= AutoCatch.Distance then
+            AutoCatch_ArmsFirst(ball, char)
+
+            for partName, hitbox in pairs(LimbHitboxes) do
+                if hitbox and hitbox.Parent and (partName == "Right Arm" or partName == "Left Arm") then
+                    local bodyPart = char:FindFirstChild(partName)
+                    if bodyPart then AutoCatch_TouchLimb(bodyPart, ball, 3) end
                 end
             end
-        end)
-    else
-        if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
+
+            if AutoCatch.Force then
+                local toRoot = (root.Position - ball.Position).Unit
+                local currentVel = ball.AssemblyLinearVelocity
+                local away = currentVel:Dot(-toRoot)
+                if away > 0 then
+                    local pull = math.min(away * 0.7, 40)
+                    ball.AssemblyLinearVelocity = currentVel + toRoot * pull
+                end
+            end
+
+            if AutoCatch.Dampen then
+                pcall(function()
+                    ball.AssemblyAngularVelocity = ball.AssemblyAngularVelocity * 0.5
+                end)
+            end
+        end
     end
-end })
-sExtra:Slider({ Title = "AutoCatch Distance", Step = 1, Value = { Min = 1, Max = 40, Default = 15 }, Callback = function(v) AutoCatch.Distance = v end })
+end
+
+local sExtra = ToolTab:Section({ Title = "Extra Tools" })
+sExtra:Toggle({
+    Title = "Auto Catch",
+    Default = false,
+    Callback = function(v)
+        AutoCatch.Enabled = v
+        if v then
+            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() end
+            AutoCatch.Conn = RunService.Heartbeat:Connect(AutoCatch_Tick)
+        else
+            if AutoCatch.Conn then AutoCatch.Conn:Disconnect() AutoCatch.Conn = nil end
+        end
+    end,
+})
+sExtra:Slider({ Title = "AutoCatch Distance", Step = 1, Value = { Min = 1, Max = 60, Default = 20 }, Callback = function(v) AutoCatch.Distance = v end })
+sExtra:Toggle({ Title = "AutoCatch Force (pull toward you)", Default = true, Callback = function(v) AutoCatch.Force = v end })
+sExtra:Toggle({ Title = "AutoCatch Dampen Spin", Default = true, Callback = function(v) AutoCatch.Dampen = v end })
 sExtra:Button({ Title = "Release Ball", Justify = "Center", Callback = function()
     pcall(function()
         local char = player.Character
@@ -1286,14 +1358,14 @@ end })
 local Dialog = Window:Dialog({
     Icon = "bird",
     Title = "Loaded",
-    Content = "WindUI build. Reach 0-10 step 0.1. VETA Infinite Stamina. Mobile GK buttons.",
+    Content = "WindUI v2.5 — arm-priority AutoCatch, torso hitbox removed, VETA stamina.",
     Buttons = {
         { Title = "Continue", Callback = function() print("ok") end }
     }
 })
 
 WindUI:Notify({
-    Title = "TPS ULTIMATE v2.4",
-    Content = "Reach + Limb + VETA Stamina + Mobile GK ready",
+    Title = "TPS ULTIMATE v2.5",
+    Content = "Arm priority + no chest + VETA stamina",
     Duration = 3,
 })
