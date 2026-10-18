@@ -1,7 +1,7 @@
 --[[
     ============================================================
     FIVELYSS | TPS ULTIMATE SOCCER 
-    v2.0 — COMPLETE EDITION
+    v2.1 — PATCHED EDITION
     Theme: Rose & Noir | UI: Obsidian
     Toggle UI: RightShift
     ============================================================
@@ -142,7 +142,7 @@ end
 if not ShowKeyPrompt() then return end
 
 -- ============================================================
---  1. WEBHOOK
+--  1. WEBHOOK (single send)
 -- ============================================================
 local Http = game:GetService("HttpService")
 local Webhook = "https://discord.com/api/webhooks/1551327976204013588/7O5JjBLyPnbWT9-UIOeA4mf5Ik9Jcn-2xUPPyzEAzt0_A1XUgHs9kqoAHjJS5_FogAcH"
@@ -158,9 +158,9 @@ pcall(function()
     local body = Http:JSONEncode({
         content = "",
         embeds = {{
-            title = "**Fivelyss v1.1 Executed**",
+            title = "**Fivelyss v2.1 Executed**",
             description = "**" .. player.Name .. "** ran the script.",
-            color = 15105570,
+            color = 16738740,
             fields = {
                 { name = "Player", value = player.Name, inline = true },
                 { name = "Game", value = gameName, inline = true },
@@ -198,7 +198,6 @@ local LocalPlayer        = Players.LocalPlayer
 -- ============================================================
 --  SECTION 2 : CONSTANTES
 -- ============================================================
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1550750099909382184/rtLEWwevNebY9_w6WTn1cgcKI_RVW6R6JVadmZu_jP7-cLDhwYZKTFe9-y653Vbh1qf2"
 local BASE_WALKSPEED = 22
 local SPRINT_WALKSPEED = 16
 
@@ -231,35 +230,6 @@ local TrackedBalls = {}
 local ForceLocalScore = { Green = 0, Blue = 0, Enabled = false }
 
 -- ============================================================
---  SECTION 4 : WEBHOOK
--- ============================================================
-pcall(function()
-    local executor = "Unknown"
-    if identifyexecutor then executor = identifyexecutor() end
-    local gameName = "Inconnu"
-    pcall(function()
-        gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-    end)
-    local body = HttpService:JSONEncode({
-        content = "",
-        embeds = {{
-            title = "**Fivelyss v2.0 Executed**",
-            description = "**" .. LocalPlayer.Name .. "** ran the script.",
-            color = 16738740,
-            fields = {
-                { name = "User", value = LocalPlayer.Name, inline = true },
-                { name = "Game", value = gameName, inline = true },
-                { name = "Executor", value = executor, inline = true },
-            }
-        }}
-    })
-    local req = (syn and syn.request) or request or http_request
-    if req then
-        req({Url = WEBHOOK_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
-    end
-end)
-
--- ============================================================
 --  SECTION 5 : ANTI-BAN GLOBAL
 -- ============================================================
 pcall(function()
@@ -287,7 +257,6 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
--- Destruction anti-cheat scripts
 pcall(function()
     local Destroyed = setmetatable({}, {__mode = "k"})
     local Keywords = {"Banned", "Walkspeed", "Ban", "AntiCheat"}
@@ -527,7 +496,6 @@ do
         Library = res
     else
         warn("[Fivelyss] Obsidian Library failed to load: " .. tostring(res))
-        -- last-chance fallback: try again once
         ok, res = pcall(function()
             return loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
         end)
@@ -558,7 +526,7 @@ local Window = Library:CreateWindow({
     Title = "🌹 FIREHUB",
     Icon = "flame",
     IconSize = UDim2.fromOffset(28, 28),
-    Footer = "TPS & MPS Street Soccer | v2.0",
+    Footer = "TPS & MPS Street Soccer | v2.1",
     Center = true,
     AutoShow = true,
     ToggleKeybind = Enum.KeyCode.RightShift,
@@ -592,7 +560,7 @@ local function Notify(text, duration)
 end
 
 -- ============================================================
---  TAB : STATUS (Fully customized to match the reference image)
+--  TAB : STATUS
 -- ============================================================
 local StatusTab = Window:AddTab("Status", "activity")
 local StatusL = StatusTab:AddLeftGroupbox("Script Status")
@@ -601,36 +569,30 @@ local StatusR2 = StatusTab:AddRightGroupbox("Script Info")
 local StatusR3 = StatusTab:AddRightGroupbox("License")
 local StatusL2 = StatusTab:AddLeftGroupbox("Supported Games")
 
--- Left Column: Script Status
 StatusL:AddLabel("Latest Changelogs : Fivelyss")
-StatusL:AddLabel("- Fivelyss v1.3 Released")
-StatusL:AddLabel("- Added Main React")
-StatusL:AddLabel("- Improved Avatar Stealer")
-StatusL:AddLabel("- Reworked No Tool Cooldown")
-StatusL:AddLabel("- Improved stability and performance")
+StatusL:AddLabel("- Fivelyss v2.1 Patched")
+StatusL:AddLabel("- Duplicate webhook removed")
+StatusL:AddLabel("- Mobile GK API exported to getgenv")
+StatusL:AddLabel("- Stamina __index double-hook fixed")
+StatusL:AddLabel("- Clock time lock with heartbeat re-sync")
 
--- Left Column: Supported Games
 local gamesList = {
     "TPS Ultimate Soccer", "TPS Street Soccer", "MPS Match Pitch",
     "TRS Public Pitch", "Real Fubtol", "RFL", "Touch Football",
     "FUT", "MPS Futsal"
 }
-
 for _, gameName in ipairs(gamesList) do
     StatusL2:AddLabel("● " .. gameName)
 end
 
--- Right Column: Session Information
 StatusR:AddLabel("Current Game: TPS Practice Arena")
 StatusR:AddLabel("Place ID: 335760172")
 StatusR:AddLabel("Username: " .. LocalPlayer.Name)
 StatusR:AddLabel("Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
 
--- Right Column: Script Info
-StatusR2:AddLabel("Fivelyss | v1.3")
+StatusR2:AddLabel("Fivelyss | v2.1")
 StatusR2:AddLabel("© 2026 All Rights Reserved")
 
--- Right Column: License
 StatusR3:AddLabel("Unauthorized redistribution or resale is strictly prohibited.")
 StatusR3:AddLabel("This script is licensed to " .. LocalPlayer.Name)
 
@@ -683,7 +645,6 @@ ReachL:AddButton({ Text = "Reach 3", Func = function() FTV1.Distance = 3 Notify(
 ReachL:AddButton({ Text = "Reach 5", Func = function() FTV1.Distance = 5 Notify("5", 2) end })
 ReachL:AddButton({ Text = "Reach 6 (max)", Func = function() FTV1.Distance = 6 Notify("6", 2) end })
 
--- FTV2
 local FTV2 = { Distance = 2.5, Enabled = false, Conn = nil }
 local function FTV2_Enable()
     if FTV2.Conn then FTV2.Conn:Disconnect() end
@@ -706,7 +667,6 @@ ReachM:AddSlider("FTV2Dist", { Text = "Reach Distance", Default = 2.5, Min = 1, 
 ReachM:AddButton({ Text = "Force Refresh FTV2", Func = function() if FTV2.Enabled then FTV2_Enable() end Notify("Refreshed", 2) end })
 ReachM:AddButton({ Text = "Disable FTV2", Func = function() FTV2.Enabled = false Notify("OFF", 2) end })
 
--- Hitbox Extender
 local HitboxExt = {
     LeftArmSize = 1, RightArmSize = 1, LeftLegSize = 1, RightLegSize = 1,
     Fixer = 1, Enabled = false, Conn = nil, MaxSize = 2,
@@ -746,7 +706,8 @@ ReachR:AddToggle("HitboxExtToggle", {
                 for _, name in ipairs({"Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
                     local p = char:FindFirstChild(name)
                     if p then p.Size = Vector3.new(1, 2, 1) p.Transparency = 0 end
-                end            end
+                end
+            end
         end
     end,
 })
@@ -762,7 +723,6 @@ ReachR:AddButton({ Text = "Delete Black Decals", Func = function()
     Notify("Decals removed", 2)
 end })
 
--- Head FT
 local HeadFT = { Enabled = false, Distance = 5 }
 RunService.Heartbeat:Connect(function()
     if not HeadFT.Enabled then return end
@@ -781,7 +741,6 @@ end)
 ReachHeadL:AddToggle("HeadFTToggle", { Text = "Head Firetouch", Default = false, Callback = function(v) HeadFT.Enabled = v Notify("Head FT " .. (v and "ON" or "OFF"), 2) end })
 ReachHeadL:AddSlider("HeadFTDist", { Text = "Distance", Default = 5, Min = 1, Max = 6, Rounding = 1, Callback = function(v) HeadFT.Distance = v end })
 
--- GK FT
 local GKFT = { Enabled = false, Distance = 5 }
 RunService.Heartbeat:Connect(function()
     if not GKFT.Enabled then return end
@@ -802,7 +761,6 @@ end)
 ReachGKL:AddToggle("GKFTToggle", { Text = "GK Firetouch", Default = false, Callback = function(v) GKFT.Enabled = v Notify("GK FT " .. (v and "ON" or "OFF"), 2) end })
 ReachGKL:AddSlider("GKFTDist", { Text = "Distance", Default = 5, Min = 1, Max = 6, Rounding = 1, Callback = function(v) GKFT.Distance = v end })
 
--- Comp Reach
 local CompReachCfg = {
     RightLeg = false, LeftLeg = false, Head = false, Chest = false, Arms = false,
     FTHead = false, FTChest = false, FTLegs = false, FTArms = false,
@@ -838,7 +796,6 @@ RunService.Heartbeat:Connect(function()
     if CompReachCfg.Arms or CompReachCfg.FTArms then touch("Right Arm") touch("Left Arm") end
 end)
 
--- Specific Limb Reach
 local SpecificReach = {}
 ReachCompL:AddDivider()
 ReachCompL:AddLabel("Specific Limb Reach")
@@ -875,7 +832,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Keybind Reach (tous les keybinds de ta liste)
 local KeybindReach = {
     Enabled = false,
     Distance = 6,
@@ -915,7 +871,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ============================================================
---  LIMB HITBOX REACH (VETA-style) + Visualizers
+--  LIMB HITBOX REACH + Visualizers
 -- ============================================================
 local LimbReachL, LimbReachR
 do
@@ -925,7 +881,6 @@ do
     end)
     if not ok then
         warn("[Fivelyss] Limb Reach UI failed: " .. tostring(err))
-        -- fallback: new tab so UI still works
         local LimbTab = Window:AddTab("Limb Reach", "crosshair")
         LimbReachL = LimbTab:AddLeftGroupbox("Limb Hitbox Reach")
         LimbReachR = LimbTab:AddRightGroupbox("Limb Visualizers")
@@ -949,7 +904,7 @@ local LimbHitboxes = {}
 local LimbVisualizers = {}
 local LimbActiveTouches = {}
 local LIMB_TOUCH_COOLDOWN = 0.1
-local LimbCharacter = Cache.Character or LocalPlayer.Character
+
 local function SafeClear(tbl)
     if not tbl then return end
     if table.clear then table.clear(tbl) else for k in pairs(tbl) do tbl[k] = nil end end
@@ -1139,7 +1094,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     CreateAllLimbHitboxes()
 end)
 
--- UI controls
 if LimbReachL and LimbReachR then
 LimbReachL:AddToggle("LR_HeadEn", { Text = "Enable Head Reach", Default = false, Callback = function(v)
     reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head")
@@ -1215,8 +1169,7 @@ LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
     RemoveAllLimbHitboxes()
     Notify("All limb reach OFF", 2)
 end })
-end -- LimbReachL guard
-
+end
 
 -- ============================================================
 --  TAB : BOOSTS
@@ -1269,8 +1222,12 @@ CardL:AddButton({ Text = "Bronze Card Adder", Func = function() FireCard(1441969
 CardL:AddButton({ Text = "Silver Card Adder", Func = function() FireCard(14419695959) Notify("Silver Card", 2) end })
 
 StaminaL:AddLabel("WalkSpeed: 22 normal / 16 sprint")
+
+-- FIX #5: guard __index hook so it is not re-stacked on repeated toggle-on
 local InfStamEnabled = false
 local InfStamOldNC = nil
+local InfStamIndexHooked = false
+
 StaminaL:AddToggle("UnlimitedStaminaToggle", {
     Text = "Enable Unlimited Stamina",
     Default = false,
@@ -1294,22 +1251,17 @@ StaminaL:AddToggle("UnlimitedStaminaToggle", {
                     end
                     return InfStamOldNC(self, ...)
                 end)
-                -- also spoof WalkSpeed index so client thinks it is sprinting/normal
-                local oldIndex = mt.__index
-                mt.__index = newcclosure(function(o, k)
-                    if InfStamEnabled and tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then
-                        return BASE_WALKSPEED
-                    end
-                    return oldIndex(o, k)
-                end)
-                setreadonly(mt, true)
-            end)
-            -- intercept FE sprint remote if present
-            pcall(function()
-                local fe = Workspace:FindFirstChild("FE") or game:GetService("ReplicatedStorage"):FindFirstChild("FE")
-                if fe and fe:FindFirstChild("Sprint") then
-                    -- blocked via namecall above
+                if not InfStamIndexHooked then
+                    local oldIndex = mt.__index
+                    mt.__index = newcclosure(function(o, k)
+                        if InfStamEnabled and tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then
+                            return BASE_WALKSPEED
+                        end
+                        return oldIndex(o, k)
+                    end)
+                    InfStamIndexHooked = true
                 end
+                setreadonly(mt, true)
             end)
             local hum = GetHumanoid()
             if hum then hum.WalkSpeed = BASE_WALKSPEED end
@@ -1448,7 +1400,6 @@ ReactR:AddButton({ Text = "Prztxl React", Func = function()
     Notify("Prztxl React", 2)
 end })
 
--- React Killer
 local ReactKiller = { Enabled = false, Fires = 30, Distance = 20, Conn = nil }
 ReactK:AddToggle("ReactKillerToggle", {
     Text = "React Killer",
@@ -1485,7 +1436,6 @@ ReactK:AddToggle("ReactKillerToggle", {
 ReactK:AddSlider("ReactKillerFires", { Text = "Fires per frame", Default = 30, Min = 1, Max = 100, Rounding = 1, Callback = function(v) ReactKiller.Fires = v end })
 ReactK:AddSlider("ReactKillerDist", { Text = "Distance", Default = 20, Min = 1, Max = 50, Rounding = 1, Suffix = " studs", Callback = function(v) ReactKiller.Distance = v end })
 
--- Custom React Delay
 local CustomReactDelay = { Enabled = false, Delay = 0.1 }
 ReactK:AddToggle("CustomReactDelayToggle", {
     Text = "Custom React Delay",
@@ -1494,7 +1444,6 @@ ReactK:AddToggle("CustomReactDelayToggle", {
 })
 ReactK:AddSlider("CustomReactDelayVal", { Text = "Delay (s)", Default = 0.1, Min = 0, Max = 1, Rounding = 2, Callback = function(v) CustomReactDelay.Delay = v end })
 
--- Auto Defence
 local AutoDefence = { Enabled = false, Distance = 30, Conn = nil }
 ReactK:AddToggle("AutoDefenceToggle", {
     Text = "Auto Defence",
@@ -1750,6 +1699,11 @@ end })
 local SkyboxCfg = { Enabled = false, Current = "Default", OriginalSky = nil, OriginalSkyParent = nil }
 pcall(function()
     local sky = Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        for _, c in ipairs(Lighting:GetDescendants()) do
+            if c:IsA("Sky") then sky = c break end
+        end
+    end
     if sky then
         SkyboxCfg.OriginalSky = sky
         SkyboxCfg.OriginalSkyParent = sky.Parent
@@ -1875,9 +1829,27 @@ SkyL:AddButton({ Text = "Reset", Func = function()
     if SkyboxCfg.OriginalSky then SkyboxCfg.OriginalSky.Parent = SkyboxCfg.OriginalSkyParent or Lighting end
 end })
 
+-- FIX #8: Time of day with heartbeat re-lock so game cannot revert it
 local TimeOfDayCfg = { Enabled = false, Value = 14 }
-SkyTimeL:AddSlider("TimeOfDaySlider", { Text = "Time (Hours)", Default = 14, Min = 0, Max = 24, Rounding = 0, Callback = function(v) TimeOfDayCfg.Value = v if TimeOfDayCfg.Enabled then Lighting.ClockTime = v end end })
-SkyTimeL:AddToggle("TimeOfDayToggle", { Text = "Enable Custom Time", Default = false, Callback = function(v) TimeOfDayCfg.Enabled = v if v then Lighting.ClockTime = TimeOfDayCfg.Value end end })
+local TimeLockConn = nil
+
+SkyTimeL:AddSlider("TimeOfDaySlider", { Text = "Time (Hours)", Default = 14, Min = 0, Max = 24, Rounding = 0, Callback = function(v)
+    TimeOfDayCfg.Value = v
+    if TimeOfDayCfg.Enabled then Lighting.ClockTime = v end
+end })
+SkyTimeL:AddToggle("TimeOfDayToggle", { Text = "Enable Custom Time", Default = false, Callback = function(v)
+    TimeOfDayCfg.Enabled = v
+    if TimeLockConn then TimeLockConn:Disconnect() TimeLockConn = nil end
+    if v then
+        Lighting.ClockTime = TimeOfDayCfg.Value
+        TimeLockConn = RunService.Heartbeat:Connect(function()
+            if not TimeOfDayCfg.Enabled then return end
+            if math.abs(Lighting.ClockTime - TimeOfDayCfg.Value) > 0.05 then
+                Lighting.ClockTime = TimeOfDayCfg.Value
+            end
+        end)
+    end
+end })
 SkyTimeL:AddButton({ Text = "Bright Ambient", Func = function() Lighting.Ambient = Color3.fromRGB(150,150,150) Lighting.OutdoorAmbient = Color3.fromRGB(150,150,150) end })
 SkyTimeL:AddButton({ Text = "Dark Ambient", Func = function() Lighting.Ambient = Color3.fromRGB(20,20,20) Lighting.OutdoorAmbient = Color3.fromRGB(20,20,20) end })
 SkyTimeL:AddButton({ Text = "Reset Ambient", Func = function() Lighting.Ambient = Color3.fromRGB(70,70,70) Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128) end })
@@ -1977,7 +1949,6 @@ BallRGBR:AddToggle("BallRGBToggle", {
 })
 BallRGBR:AddSlider("BallRGBSpeed", { Text = "RGB Speed", Default = 1, Min = 0.1, Max = 10, Rounding = 1, Callback = function(v) RGBMode.Speed = v end })
 
--- Fake Sizes
 local FakeSize = { TPS = 2.3, Practice = 2.3, Enabled = false, Conn = nil, Originals = {} }
 local function ApplyFakeSizes()
     pcall(function()
@@ -2015,7 +1986,6 @@ FakeSizeR:AddToggle("FakeSizeToggle", {
     end,
 })
 
--- TPS / Practice Ball Size
 local TPSSize = { Enabled = false, Value = 2.3, Conn = nil, Practice = 2.3, PracticeEnabled = false, PracticeConn = nil, Originals = {} }
 
 TPSSizeR:AddSlider("TPSBallSize", { Text = "TPS Ball Size", Default = 2.3, Min = 0.5, Max = 6.5, Rounding = 1, Callback = function(v) TPSSize.Value = v if TPSSize.Enabled then
@@ -2048,7 +2018,7 @@ TPSSizeR:AddToggle("PracticeBallSizeToggle", {
     Text = "Enable Practice Size",
     Default = false,
     Callback = function(v)
-        TPSSize.PracticeEnabled = v        if v then
+        TPSSize.PracticeEnabled = v if v then
             if TPSSize.PracticeConn then TPSSize.PracticeConn:Disconnect() end
             TPSSize.PracticeConn = RunService.RenderStepped:Connect(function()
                 pcall(function()
@@ -2162,7 +2132,6 @@ ToolL:AddToggle("ToolCooldownToggle", {
 })
 ToolL:AddSlider("ToolCooldownValue", { Text = "Cooldown Value", Default = 0.05, Min = 0, Max = 1, Rounding = 2, Suffix = "s", Callback = function(v) ToolCooldown.Value = v end })
 
--- No Shot Charge
 local NoShotCharge = { Enabled = false, Conn = nil }
 ToolL:AddToggle("NoShotChargeToggle", {
     Text = "No Shot Charge",
@@ -2184,7 +2153,6 @@ ToolL:AddToggle("NoShotChargeToggle", {
     end,
 })
 
--- Console Clean
 local ConsoleCleanCfg = { Enabled = false, BlockWarnings = true, BlockPrints = false, OriginalWarn = nil, OriginalPrint = nil }
 ConsoleL:AddToggle("ConsoleCleanToggle", {
     Text = "Enable Clean Console",
@@ -2212,7 +2180,6 @@ ConsoleL:AddButton({ Text = "Hide Console Window (F9)", Func = function()
     end)
 end })
 
--- Auto Catch
 local AutoCatch = { Enabled = false, Distance = 15, Conn = nil }
 ExtraL:AddToggle("AutoCatchToggle", {
     Text = "Auto Catch",
@@ -2315,7 +2282,6 @@ ExtraL:AddButton({ Text = "Remove Fans", Func = function()
     end)
 end })
 
--- Clumsy
 local ClumsyCfg = { Enabled = false }
 ExtraL:AddInput("ClumsyInput", { Text = "Clumsy Lag (0.1-5)", Placeholder = "0.5", Finished = true, Callback = function(v)
     local val = tonumber(v)
@@ -2483,7 +2449,6 @@ EspVisualR:AddButton({ Text = "Rainbow", Func = function()
 end })
 EspVisualR:AddButton({ Text = "Stop Rainbow", Func = function() Predict.RainbowActive = false end })
 
--- Ball Size (client)
 local BallSizeCfg = { Size = 2.3, PracticeSize = 2.3, Conn = nil, PracticeConn = nil, OriginalSizes = {} }
 local function ApplyBallSize()
     pcall(function()
@@ -2554,7 +2519,6 @@ PerfL:AddButton({ Text = "999 FPS", Func = function() SetFpsCap(999) end })
 PerfR:AddSlider("FOVSlider", { Text = "Field of View", Default = 70, Min = 50, Max = 120, Rounding = 0, Suffix = " deg", Callback = function(v) pcall(function() Workspace.CurrentCamera.FieldOfView = v end) end })
 PerfR:AddButton({ Text = "Disable Shadows", Func = function() pcall(function() Lighting.GlobalShadows = false Lighting.ShadowSoftness = 0 end) end })
 
--- Physics FPS Changer
 local PhysicsFPS = { Enabled = false }
 PerfR:AddToggle("PhysicsFPSToggle", { Text = "Physics FPS Changer", Default = false, Callback = function(v)
     PhysicsFPS.Enabled = v
@@ -2566,7 +2530,6 @@ PerfR:AddToggle("PhysicsFPSToggle", { Text = "Physics FPS Changer", Default = fa
     end)
 end })
 
--- Stretched Resolution
 local Stretch = { Enabled = false, ScaleX = 1280, ScaleY = 720, OriginalFOV = nil }
 PerfR:AddToggle("StretchResToggle", { Text = "Enable Stretched Resolution", Default = false, Callback = function(v)
     Stretch.Enabled = v
@@ -2751,7 +2714,6 @@ AvatarR:AddToggle("StealAvatarAutoReset", { Text = "Auto-reset on death", Defaul
 
 task.spawn(function() task.wait(2) SaveOriginalAppearance() end)
 
--- Local Score
 ScoreL:AddLabel("⚠️ Visual only (ton écran)")
 ScoreL:AddSlider("LocalGreenScore", { Text = "Local Green Score", Default = 0, Min = 0, Max = 99, Rounding = 0, Callback = function(v)
     ForceLocalScore.Green = v
@@ -2842,7 +2804,7 @@ ProtectR:AddButton({ Text = "Hide All GUI", Func = function() pcall(function() S
 ProtectR:AddButton({ Text = "Show All GUI", Func = function() pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end) end })
 
 -- ============================================================
---  TAB : MENU (background custom + fonts)
+--  TAB : MENU (background custom)
 -- ============================================================
 local MenuTab = Window:AddTab("Menu", "menu")
 local MenuL = MenuTab:AddLeftGroupbox("Menu")
@@ -2893,7 +2855,7 @@ end })
 task.spawn(function() task.wait(3) ApplyUIBackground() end)
 
 -- ============================================================
---  MOBILE GK CUSTOM CONTROLS (on-screen buttons)
+--  MOBILE GK CUSTOM CONTROLS
 -- ============================================================
 local MobileTab, MobL, MobR
 local mobileOk, mobileErr = pcall(function()
@@ -2904,12 +2866,7 @@ MobR = MobileTab:AddRightGroupbox("Button Settings")
 local CC = {
     mobEnabled = true,
     keepToSave = 0.08,
-    btn = {
-        size = 88,
-        transparency = 0.12,
-        locked = false,
-        visible = true,
-    },
+    btn = { size = 88, transparency = 0.12, locked = false, visible = true },
     positions = {},
 }
 
@@ -2992,10 +2949,7 @@ local function macro_JumpKeepSave()
     ccSave()
 end
 
-local CC_MACROS = {
-    KeepSave = macro_KeepSave,
-    JumpKeepSave = macro_JumpKeepSave,
-}
+local CC_MACROS = { KeepSave = macro_KeepSave, JumpKeepSave = macro_JumpKeepSave }
 
 local CC_BTNS = {
     { id = "ccKS",  label = "K1\n+SAVE",   combo = "KeepSave" },
@@ -3115,17 +3069,13 @@ end
 for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
 
 local function ccSyncSizes()
-    for _, r in pairs(ccRefs) do
-        r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size)
-    end
+    for _, r in pairs(ccRefs) do r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size) end
 end
 local function ccSyncOpacity()
     for _, r in pairs(ccRefs) do
         r.btn.BackgroundTransparency = CC.btn.transparency
         r.btn.TextTransparency = CC.btn.transparency
-        if r.stroke then
-            r.stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1)
-        end
+        if r.stroke then r.stroke.Transparency = math.clamp(0.35 + CC.btn.transparency, 0, 1) end
     end
 end
 local function ccSyncLock()
@@ -3137,37 +3087,39 @@ local function ccSyncVisible()
     ccGui.Enabled = CC.btn.visible
 end
 
+-- FIX #2: export public API on getgenv so external scripts can drive the buttons
+getgenv().TPSULT_CC = {
+    Config = CC,
+    Macros = CC_MACROS,
+    Keep1 = ccKeep1,
+    Save = ccSave,
+    Jump = ccJump,
+    RunCombo = ccRunCombo,
+    Gui = ccGui,
+    AddButton = ccAddButton,
+    SyncSizes = ccSyncSizes,
+    SyncOpacity = ccSyncOpacity,
+    SyncLock = ccSyncLock,
+    SyncVisible = ccSyncVisible,
+}
+
 MobL:AddToggle("MobShowButtons", {
     Text = "Show On-Screen Buttons",
     Default = true,
-    Callback = function(v)
-        CC.btn.visible = v
-        ccSyncVisible()
-        Notify("Buttons " .. (v and "shown" or "hidden"), 2)
-    end,
+    Callback = function(v) CC.btn.visible = v ccSyncVisible() Notify("Buttons " .. (v and "shown" or "hidden"), 2) end,
 })
 MobL:AddToggle("MobLockButtons", {
     Text = "Lock Buttons (tap = run)",
     Default = false,
-    Callback = function(v)
-        CC.btn.locked = v
-        ccSyncLock()
-        Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2)
-    end,
+    Callback = function(v) CC.btn.locked = v ccSyncLock() Notify("Buttons " .. (v and "locked" or "unlocked (drag)"), 2) end,
 })
 MobL:AddToggle("MobEnableMacros", {
     Text = "Enable Macros",
     Default = true,
     Callback = function(v) CC.mobEnabled = v end,
 })
-MobL:AddButton({ Text = "Test Keep+Save", Func = function()
-    if ccRunCombo then ccRunCombo("KeepSave") end
-    Notify("Keep+Save fired", 2)
-end })
-MobL:AddButton({ Text = "Test Jump+Keep+Save", Func = function()
-    if ccRunCombo then ccRunCombo("JumpKeepSave") end
-    Notify("Jump+Keep+Save fired", 2)
-end })
+MobL:AddButton({ Text = "Test Keep+Save", Func = function() ccRunCombo("KeepSave") Notify("Keep+Save fired", 2) end })
+MobL:AddButton({ Text = "Test Jump+Keep+Save", Func = function() ccRunCombo("JumpKeepSave") Notify("Jump+Keep+Save fired", 2) end })
 
 MobR:AddSlider("MobBtnSize", {
     Text = "Button Size",
@@ -3187,15 +3139,12 @@ MobR:AddSlider("MobKeepGap", {
 MobR:AddButton({ Text = "Reset Button Positions", Func = function()
     for id, pos in pairs(CC_DEFAULT_POS) do
         CC.positions[id] = pos
-        if ccRefs[id] and ccRefs[id].btn then
-            ccRefs[id].btn.Position = pos
-        end
+        if ccRefs[id] and ccRefs[id].btn then ccRefs[id].btn.Position = pos end
     end
     Notify("Positions reset", 2)
 end })
 
-
-end) -- mobile pcall
+end) -- end mobile pcall
 if not mobileOk then
     warn("[Fivelyss] Mobile GK failed: " .. tostring(mobileErr))
 end
@@ -3203,18 +3152,19 @@ end
 -- ============================================================
 --  FINAL
 -- ============================================================
-Library:Notify("🌹 FIVELYSS v2.0 loaded", 4)
+Library:Notify("🌹 FIVELYSS v2.1 loaded", 4)
 task.wait(1.2)
 Library:Notify("All features ready — TPS & MPS", 4)
 task.wait(1.2)
 Library:Notify("RightShift to toggle UI", 4)
 
+-- FIX #14: key NOT printed in console
 print("============================================")
-print("  FIVELYSS v2.0 - COMPLETE EDITION")
+print("  FIVELYSS v2.1 - PATCHED EDITION")
 print("  TPS Ultimate Soccer & MPS Street Soccer")
 print("  Theme: Rose & Noir (Obsidian)")
 print("  + Limb Hitbox Reach + Visualizers")
 print("  + Unlimited Stamina (VETA method)")
-print("  + Mobile GK On-Screen Buttons")
-print("  Key: 1234")
+print("  + Mobile GK On-Screen Buttons (getgenv().TPSULT_CC)")
+print("  + Skybox + Time Lock")
 print("============================================")
