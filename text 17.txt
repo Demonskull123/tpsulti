@@ -1,7 +1,7 @@
 --[[
     ============================================================
     FIVELYSS | TPS ULTIMATE SOCCER
-    v2.2 — MERGED EDITION
+    v2.2.1 — MERGED EDITION (UI FIX)
     Key: 1234 | UI: Obsidian | Toggle: RightShift
     ============================================================
 ]]
@@ -137,7 +137,7 @@ pcall(function()
     local body = Http:JSONEncode({
         content = "",
         embeds = {{
-            title = "**Fivelyss v2.2 Executed**",
+            title = "**Fivelyss v2.2.1 Executed**",
             description = "**" .. player.Name .. "** ran the script.",
             color = 15105570,
             fields = {
@@ -465,7 +465,7 @@ local Window = Library:CreateWindow({
     Title = "🌹 FIREHUB",
     Icon = "flame",
     IconSize = UDim2.fromOffset(28, 28),
-    Footer = "TPS & MPS Street Soccer | v2.2",
+    Footer = "TPS & MPS Street Soccer | v2.2.1",
     Center = true,
     AutoShow = true,
     ToggleKeybind = Enum.KeyCode.RightShift,
@@ -491,11 +491,10 @@ local StatusTab = Window:AddTab("Status", "activity")
 local StatusL = StatusTab:AddLeftGroupbox("Script Status")
 local StatusR = StatusTab:AddRightGroupbox("Session Information")
 
-StatusL:AddLabel("Fivelyss v2.2 — MERGED")
-StatusL:AddLabel("- Reach (decimal sliders 0-10)")
-StatusL:AddLabel("- Limb visualizers + transparency")
-StatusL:AddLabel("- Infinite stamina (VETA)")
-StatusL:AddLabel("- Mobile GK on-screen buttons")
+StatusL:AddLabel("Fivelyss v2.2.1 — UI FIX")
+StatusL:AddLabel("- Sky tab icon fixed")
+StatusL:AddLabel("- Mobile GK buttons re-enable post-build")
+StatusL:AddLabel("- DisplayOrder maxed")
 
 StatusR:AddLabel("Username: " .. LocalPlayer.Name)
 StatusR:AddLabel("Place ID: " .. tostring(game.PlaceId))
@@ -1170,7 +1169,7 @@ FFlagInjectorL:AddButton({ Text = "Apply", Func = function()
     end
 end })
 
-local SkyTab = Window:AddTab("Sky", "cloud-sun")
+local SkyTab = Window:AddTab("Sky", "sun")
 local SkyL = SkyTab:AddLeftGroupbox("Skybox (Local)")
 local TimeL = SkyTab:AddRightGroupbox("Time / Ambient")
 local SkyboxCfg = { Enabled = false, Current = "Default", OriginalSky = nil, OriginalSkyParent = nil }
@@ -1518,7 +1517,7 @@ ProtectL:AddToggle("AntiAFK", { Text = "Anti-AFK", Default = false, Callback = f
     end
 end })
 
-local MobileTab = Window:AddTab("Mobile GK", "hand")
+local MobileTab = Window:AddTab("Mobile GK", "mouse-pointer")
 local MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
 local MobR = MobileTab:AddRightGroupbox("Button Settings")
 
@@ -1619,9 +1618,9 @@ if ccOld then ccOld:Destroy() end
 local ccGui = Instance.new("ScreenGui")
 ccGui.Name = "Fivelyss_MobileGK"
 ccGui.ResetOnSpawn = false
-ccGui.DisplayOrder = 999997
+ccGui.DisplayOrder = 2147483647
 ccGui.IgnoreGuiInset = true
-ccGui.Enabled = CC.btn.visible
+ccGui.Enabled = false
 ccGui.Parent = ccRoot
 local ccRefs = {}
 local ccBusy = false
@@ -1702,6 +1701,9 @@ local function ccAddButton(def)
     ccRefs[def.id] = { btn = btn, stroke = stroke }
 end
 for _, def in ipairs(CC_BTNS) do ccAddButton(def) end
+task.defer(function()
+    ccGui.Enabled = CC.btn.visible
+end)
 local function ccSyncSizes()
     for _, r in pairs(ccRefs) do r.btn.Size = UDim2.new(0, CC.btn.size, 0, CC.btn.size) end
 end
@@ -1744,16 +1746,14 @@ MobR:AddButton({ Text = "Reset Button Positions", Func = function()
     Notify("Positions reset", 2)
 end })
 
-Library:Notify("🌹 FIVELYSS v2.2 loaded", 4)
+Library:Notify("🌹 FIVELYSS v2.2.1 loaded", 4)
 task.wait(1.2)
-Library:Notify("Decimal reach sliders (0-10, step 0.1)", 4)
+Library:Notify("Sky tab + Mobile GK buttons fixed", 4)
 task.wait(1.2)
 Library:Notify("RightShift to toggle UI", 4)
 
 print("============================================")
-print("  FIVELYSS v2.2 - MERGED + DECIMAL REACH")
-print("  Reach sliders: 0 to 10, step 0.1")
-print("  Limb Reach + Visualizers + Transparency")
-print("  Infinite Stamina (VETA)")
-print("  Mobile GK on-screen buttons")
+print("  FIVELYSS v2.2.1 — UI FIX")
+print("  Sky icon = sun, Mobile GK icon = mouse-pointer")
+print("  Mobile GK DisplayOrder = max, deferred Enable")
 print("============================================")
