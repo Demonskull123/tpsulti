@@ -295,13 +295,13 @@ local function FTV1_Enable()
 end
 FTV1_Enable()
 
-HitboxTab:Section({ Title = "FireTouch V1" }):Slider({
+local sFTV1 = HitboxTab:Section({ Title = "FireTouch V1" })
+sFTV1:Slider({
     Title = "Reach Distance",
     Step = 0.1,
     Value = { Min = 0, Max = 10, Default = 2.5 },
     Callback = function(v) FTV1.Distance = v end,
 })
-local sFTV1 = HitboxTab:Section({ Title = "FireTouch V1" })
 sFTV1:Button({ Title = "Refresh Balls", Justify = "Center", Callback = function() FindAllBalls() WindUI:Notify({Title="Refresh",Content="Found ".. #TrackedBalls .." balls"}) end })
 sFTV1:Button({ Title = "Re-enable FTV1", Justify = "Center", Callback = function() FTV1_Enable() WindUI:Notify({Title="FTV1",Content="Refreshed"}) end })
 
@@ -669,7 +669,7 @@ lrR:Button({ Title = "Disable All Limb Reach", Justify = "Center", Callback = fu
 end })
 
 -- ============================================================
--- BOOSTS + Infinite Stamina
+-- BOOSTS + Infinite Stamina (VETA)
 -- ============================================================
 local BoostTab = Window:Tab({ Title = "Boost", Icon = "zap" })
 local function FireBoost(id, skill)
@@ -696,48 +696,124 @@ sCards:Button({ Title = "Legendary Card", Justify = "Center", Callback = functio
 sCards:Button({ Title = "Bronze Card", Justify = "Center", Callback = function() FireBoost(14419693337, "Card") end })
 sCards:Button({ Title = "Silver Card", Justify = "Center", Callback = function() FireBoost(14419695959, "Card") end })
 
-local BASE_WALKSPEED = 22
-local InfStamEnabled = false
-local InfStamOldNC = nil
-local InfStamIndexHooked = false
+-- UNLIMITED STAMINA — VETA method
 local sStam = BoostTab:Section({ Title = "Unlimited Stamina" })
+local InfStamEnabled = false
 sStam:Toggle({
-    Title = "Enable Unlimited Stamina", Default = false,
+    Title = "Enable Unlimited Stamina",
+    Default = false,
     Callback = function(v)
         InfStamEnabled = v
-        if v then
-            pcall(function()
-                local mt = getrawmetatable(game)
-                if not mt then return end
-                setreadonly(mt, false)
-                if not InfStamOldNC then InfStamOldNC = mt.__namecall end
-                mt.__namecall = newcclosure(function(self, ...)
-                    if InfStamEnabled then
-                        local m = getnamecallmethod()
-                        if m == "FireServer" or m == "InvokeServer" then
-                            local n = tostring(self):lower()
-                            if n:find("sprint") or n:find("stamina") then return end
+        if v == true then
+            local mt = getrawmetatable(game)
+            setreadonly(mt, false)
+            local old_namecall = mt.__namecall
+            local intercepted, disabled, returns = {}, {}, {}
+            local namecallMethod = getnamecallmethod or get_namecall_method
+            local methods = {
+                RemoteEvent = "FireServer",
+                RemoteFunction = "InvokeServer",
+                BindableEvent = "Fire",
+                BindableFunction = "Invoke"
+            }
+
+            getgenv().InterceptRemoteArgs = function(eventOrFunc, args)
+                intercepted[eventOrFunc] = args
+            end
+
+            getgenv().SpoofReturn = function(func, newReturn)
+                returns[func] = newReturn
+            end
+
+            getgenv().DisableRemote = function(eventOrFunc)
+                disabled[eventOrFunc] = true
+            end
+
+            getgenv().EnableRemote = function(eventOrFunc)
+                disabled[eventOrFunc] = false
+            end
+
+            getgenv().DisableNebulaRemoteAbuseAPI = function()
+                disabled = {}
+                returns = {}
+                intercepted = {}
+                mt.__namecall = old_namecall
+            end
+
+            mt.__namecall = newcclosure(function(self, ...)
+                if InfStamEnabled == false then
+                    return old_namecall(self, ...)
+                end
+
+                local args = {...}
+                local event = namecallMethod()
+                if methods[self.ClassName] == event then
+                    if disabled[self] then
+                        return
+                    elseif intercepted[self] then
+                        local intercept = intercepted[self]
+                        if typeof(intercept) == "function" then
+                            args = {intercept(unpack(args))}
+                        elseif typeof(intercept) == "table" then
+                            args = intercept
                         end
                     end
-                    return InfStamOldNC(self, ...)
-                end)
-                if not InfStamIndexHooked then
-                    local oldIndex = mt.__index
-                    mt.__index = newcclosure(function(o, k)
-                        if InfStamEnabled and tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then
-                            return BASE_WALKSPEED
-                        end
-                        return oldIndex(o, k)
-                    end)
-                    InfStamIndexHooked = true
                 end
-                setreadonly(mt, true)
+                local returned = {old_namecall(self, unpack(args))}
+                if returns[self] and returned then
+                    returned = {returns[self](unpack(returned))}
+                end
+                return unpack(returned)
             end)
-            local char = player.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = BASE_WALKSPEED end
+
+            local old_index = mt.__index
+            mt.__index = function(o, k)
+                if tostring(o) == "Humanoid" and tostring(k) == "WalkSpeed" then
+                    return 16
+                end
+                return old_index(o, k)
+            end
+            setreadonly(mt, true)
+
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoid = character:WaitForChild("Humanoid")
+
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            if ReplicatedStorage:FindFirstChild("FE") and ReplicatedStorage.FE:FindFirstChild("Sprint") then
+                InterceptRemoteArgs(ReplicatedStorage.FE.Sprint, function()
+                    return "Ended"
+                end)
+            end
+
+            humanoid.WalkSpeed = 22
+
+            local mouse = player:GetMouse()
+            mouse.KeyDown:Connect(function(key)
+                if InfStamEnabled == false then return end
+                if key:lower() == "r" then
+                    humanoid.WalkSpeed = 16
+                end
+            end)
+
+            mouse.Button1Down:Connect(function()
+                if InfStamEnabled == false then return end
+                humanoid.WalkSpeed = 22
+            end)
+
+            local pointsGui = player.PlayerGui:FindFirstChild("Start")
+            if pointsGui and pointsGui:FindFirstChild("Points") then
+                local instantStam = pointsGui.Points:FindFirstChild("InstantStamina")
+                if instantStam then
+                    instantStam.Text = "lov active"
+                end
+            end
+
+            WindUI:Notify({
+                Title = "Infinite Stamina",
+                Content = "Infinite Stamina activated!"
+            })
         end
-    end,
+    end
 })
 
 -- ============================================================
@@ -1195,7 +1271,7 @@ MobR:Button({ Title = "Reset Button Positions", Justify = "Center", Callback = f
 end })
 
 -- ============================================================
--- MISC (Anti Kick, Cards, Misc utilities)
+-- MISC
 -- ============================================================
 local MiscTab = Window:Tab({ Title = "Misc", Icon = "sparkles" })
 local AntiSection = MiscTab:Section({ Title = "Anti Kick" })
@@ -1210,14 +1286,14 @@ end })
 local Dialog = Window:Dialog({
     Icon = "bird",
     Title = "Loaded",
-    Content = "WindUI build. Reach 0-10 step 0.1. Mobile GK on-screen buttons available.",
+    Content = "WindUI build. Reach 0-10 step 0.1. VETA Infinite Stamina. Mobile GK buttons.",
     Buttons = {
         { Title = "Continue", Callback = function() print("ok") end }
     }
 })
 
 WindUI:Notify({
-    Title = "TPS ULTIMATE v2.3 WindUI",
-    Content = "Reach + Limb + Stamina + Mobile GK ready",
+    Title = "TPS ULTIMATE v2.4",
+    Content = "Reach + Limb + VETA Stamina + Mobile GK ready",
     Duration = 3,
 })
