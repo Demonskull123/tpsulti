@@ -518,7 +518,26 @@ end)
 -- ============================================================
 --  SECTION 10 : OBSIDIAN UI — ROSE & NOIR
 -- ============================================================
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
+local Library
+do
+    local ok, res = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
+    end)
+    if ok and res then
+        Library = res
+    else
+        warn("[Fivelyss] Obsidian Library failed to load: " .. tostring(res))
+        -- last-chance fallback: try again once
+        ok, res = pcall(function()
+            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Ali-lov3/Obsidian-UiLibs/refs/heads/main/Library.lua"))()
+        end)
+        if ok and res then
+            Library = res
+        else
+            error("[Fivelyss] UI library could not load. Check HttpGet / executor.")
+        end
+    end
+end
 
 Library.Scheme.Font             = Font.fromEnum(Enum.Font.Code)
 Library.Scheme.BackgroundColor  = Color3.fromRGB(10, 5, 10)
@@ -898,8 +917,20 @@ end)
 -- ============================================================
 --  LIMB HITBOX REACH (VETA-style) + Visualizers
 -- ============================================================
-local LimbReachL = ReachTab:AddLeftGroupbox("Limb Hitbox Reach")
-local LimbReachR = ReachTab:AddRightGroupbox("Limb Visualizers")
+local LimbReachL, LimbReachR
+do
+    local ok, err = pcall(function()
+        LimbReachL = ReachTab:AddLeftGroupbox("Limb Hitbox Reach")
+        LimbReachR = ReachTab:AddRightGroupbox("Limb Visualizers")
+    end)
+    if not ok then
+        warn("[Fivelyss] Limb Reach UI failed: " .. tostring(err))
+        -- fallback: new tab so UI still works
+        local LimbTab = Window:AddTab("Limb Reach", "crosshair")
+        LimbReachL = LimbTab:AddLeftGroupbox("Limb Hitbox Reach")
+        LimbReachR = LimbTab:AddRightGroupbox("Limb Visualizers")
+    end
+end
 
 local reachSettings = {
     HeadEnabled = false, HeadVisualizer = false,
@@ -919,6 +950,10 @@ local LimbVisualizers = {}
 local LimbActiveTouches = {}
 local LIMB_TOUCH_COOLDOWN = 0.1
 local LimbCharacter = Cache.Character or LocalPlayer.Character
+local function SafeClear(tbl)
+    if not tbl then return end
+    if table.clear then table.clear(tbl) else for k in pairs(tbl) do tbl[k] = nil end end
+end
 
 local function GetReachDistanceForPart(partName)
     if partName == "Head" then
@@ -1044,9 +1079,9 @@ end
 local function RemoveAllLimbHitboxes()
     for _, h in pairs(LimbHitboxes) do if h then h:Destroy() end end
     for _, v in pairs(LimbVisualizers) do if v then v:Destroy() end end
-    table.clear(LimbHitboxes)
-    table.clear(LimbVisualizers)
-    table.clear(LimbActiveTouches)
+    SafeClear(LimbHitboxes)
+    SafeClear(LimbVisualizers)
+    SafeClear(LimbActiveTouches)
 end
 
 local function CheckLimbBallCollisions()
@@ -1087,7 +1122,7 @@ local function CheckLimbBallCollisions()
     end
 end
 
-CreateAllLimbHitboxes()
+pcall(CreateAllLimbHitboxes)
 
 local limbLastUpdate = 0
 RunService.Heartbeat:Connect(function()
@@ -1105,6 +1140,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- UI controls
+if LimbReachL and LimbReachR then
 LimbReachL:AddToggle("LR_HeadEn", { Text = "Enable Head Reach", Default = false, Callback = function(v)
     reachSettings.HeadEnabled = v UpdateLimbVisualizer("Head")
 end })
@@ -1179,6 +1215,7 @@ LimbReachR:AddButton({ Text = "Disable All Limb Reach", Func = function()
     RemoveAllLimbHitboxes()
     Notify("All limb reach OFF", 2)
 end })
+end -- LimbReachL guard
 
 
 -- ============================================================
@@ -2858,9 +2895,11 @@ task.spawn(function() task.wait(3) ApplyUIBackground() end)
 -- ============================================================
 --  MOBILE GK CUSTOM CONTROLS (on-screen buttons)
 -- ============================================================
-local MobileTab = Window:AddTab("Mobile GK", "smartphone")
-local MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
-local MobR = MobileTab:AddRightGroupbox("Button Settings")
+local MobileTab, MobL, MobR
+local mobileOk, mobileErr = pcall(function()
+MobileTab = Window:AddTab("Mobile GK", "hand")
+MobL = MobileTab:AddLeftGroupbox("On-Screen Buttons")
+MobR = MobileTab:AddRightGroupbox("Button Settings")
 
 local CC = {
     mobEnabled = true,
@@ -3155,6 +3194,11 @@ MobR:AddButton({ Text = "Reset Button Positions", Func = function()
     Notify("Positions reset", 2)
 end })
 
+
+end) -- mobile pcall
+if not mobileOk then
+    warn("[Fivelyss] Mobile GK failed: " .. tostring(mobileErr))
+end
 
 -- ============================================================
 --  FINAL
